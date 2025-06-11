@@ -3,10 +3,27 @@ using GenAI.Bridge.Contracts;
 namespace GenAI.Bridge.Abstractions;
 
 /// <summary>
-/// Volatile or persistent context for multi-turn/agent scenarios.
+/// Manages temporary or persistent conversational context (chat history, short-term memory).
+/// <para>CONTRACT: All operations are thread-safe and support TTL-based expiration.</para>
 /// </summary>
 public interface IContextStore
 {
-    Task SaveTurnAsync(string sessionId, PromptTurn turn, TimeSpan ttl, CancellationToken ct = default);
-    Task<IReadOnlyList<PromptTurn>> LoadTurnsAsync(string sessionId, int maxTurns, CancellationToken ct = default);
+    /// <summary>
+    /// Saves a single conversation turn for a session.
+    /// If the session doesn't exist, it is created.
+    /// </summary>
+    Task SaveTurnAsync(
+        string sessionId,
+        PromptTurn turn,
+        TimeSpan ttl,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Loads the most recent turns for a session, up to maxTurns.
+    /// If session does not exist or expired, returns empty list.
+    /// </summary>
+    Task<IReadOnlyList<PromptTurn>> LoadTurnsAsync(
+        string sessionId,
+        int maxTurns,
+        CancellationToken ct = default);
 }
