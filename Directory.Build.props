@@ -1,0 +1,10 @@
+<Project>
+    <PropertyGroup>
+        <LangVersion>latest</LangVersion>
+        <Nullable>enable</Nullable>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <AnalysisLevel>latest</AnalysisLevel>
+        <Deterministic>true</Deterministic>
+        <WarningsNotAsErrors>CS1591</WarningsNotAsErrors> <!-- allow missing XML docs for now -->
+    </PropertyGroup>
+</Project>
