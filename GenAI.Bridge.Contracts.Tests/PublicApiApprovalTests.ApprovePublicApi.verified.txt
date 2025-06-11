@@ -1,0 +1,93 @@
+﻿[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v9.0", FrameworkDisplayName=".NET 9.0")]
+namespace GenAI.Bridge.Abstractions
+{
+    public interface IContextStore
+    {
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<GenAI.Bridge.Contracts.PromptTurn>> LoadTurnsAsync(string sessionId, int maxTurns, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.Task SaveTurnAsync(string sessionId, GenAI.Bridge.Contracts.PromptTurn turn, System.TimeSpan ttl, System.Threading.CancellationToken ct = default);
+    }
+    public interface ICostEstimator
+    {
+        decimal EstimateCost(GenAI.Bridge.Contracts.CompletionPrompt prompt, string model);
+        int EstimatePromptTokens(GenAI.Bridge.Contracts.CompletionPrompt prompt);
+    }
+    public interface IEmbeddingAdapter
+    {
+        System.Threading.Tasks.Task<GenAI.Bridge.Contracts.EmbeddingResult> GetEmbeddingAsync(GenAI.Bridge.Contracts.EmbeddingPrompt prompt, System.Threading.CancellationToken ct = default);
+    }
+    public interface IGenAiBridge
+    {
+        System.Threading.Tasks.Task<GenAI.Bridge.Contracts.CompletionResult> CompleteAsync(GenAI.Bridge.Contracts.CompletionPrompt prompt, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.Task<GenAI.Bridge.Contracts.EmbeddingResult> EmbedAsync(GenAI.Bridge.Contracts.EmbeddingPrompt prompt, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.Task<GenAI.Bridge.Contracts.CompletionResult> RunScenarioAsync(GenAI.Bridge.Contracts.ScenarioPrompt prompt, System.Threading.CancellationToken ct = default);
+        System.Collections.Generic.IAsyncEnumerable<GenAI.Bridge.Contracts.ContentChunk> StreamCompletionAsync(GenAI.Bridge.Contracts.CompletionPrompt prompt, System.Threading.CancellationToken ct = default);
+    }
+    public interface IModelRouter
+    {
+        string ResolveModelFor(GenAI.Bridge.Contracts.CompletionPrompt prompt);
+        string ResolveModelFor(GenAI.Bridge.Contracts.ScenarioPrompt scenarioPrompt);
+    }
+    public interface IScenarioRegistry
+    {
+        GenAI.Bridge.Contracts.ScenarioPrompt GetScenario(string scenarioName);
+        System.Collections.Generic.IEnumerable<string> ListScenarioNames();
+    }
+    public interface IVectorStore
+    {
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "ExternalId",
+                "Score"})]
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<System.ValueTuple<string, float>>> SearchAsync(System.Collections.Generic.IReadOnlyList<float> queryVector, int topK, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.Task UpsertAsync(string externalId, System.Collections.Generic.IReadOnlyList<float> vector, System.Threading.CancellationToken ct = default);
+    }
+}
+namespace GenAI.Bridge.Contracts
+{
+    public sealed class CompletionPrompt : System.IEquatable<GenAI.Bridge.Contracts.CompletionPrompt>
+    {
+        public CompletionPrompt(string? SystemMessage, System.Collections.Generic.IReadOnlyList<GenAI.Bridge.Contracts.PromptTurn> Turns, System.Collections.Generic.IReadOnlyDictionary<string, object>? Metadata = null) { }
+        public System.Collections.Generic.IReadOnlyDictionary<string, object>? Metadata { get; init; }
+        public string? SystemMessage { get; init; }
+        public System.Collections.Generic.IReadOnlyList<GenAI.Bridge.Contracts.PromptTurn> Turns { get; init; }
+    }
+    public sealed class CompletionResult : System.IEquatable<GenAI.Bridge.Contracts.CompletionResult>
+    {
+        public CompletionResult(string Content, System.Collections.Generic.IReadOnlyDictionary<string, object>? Metadata = null) { }
+        public string Content { get; init; }
+        public System.Collections.Generic.IReadOnlyDictionary<string, object>? Metadata { get; init; }
+    }
+    public sealed class ContentChunk : System.IEquatable<GenAI.Bridge.Contracts.ContentChunk>
+    {
+        public ContentChunk(int Index, string Content) { }
+        public string Content { get; init; }
+        public int Index { get; init; }
+    }
+    public sealed class EmbeddingPrompt : System.IEquatable<GenAI.Bridge.Contracts.EmbeddingPrompt>
+    {
+        public EmbeddingPrompt(string InputType, string Content, System.Collections.Generic.IReadOnlyDictionary<string, object>? Metadata = null) { }
+        public string Content { get; init; }
+        public string InputType { get; init; }
+        public System.Collections.Generic.IReadOnlyDictionary<string, object>? Metadata { get; init; }
+    }
+    public sealed class EmbeddingResult : System.IEquatable<GenAI.Bridge.Contracts.EmbeddingResult>
+    {
+        public EmbeddingResult(System.Collections.Generic.IReadOnlyList<float> Vector, int TokenCount, string? Model = null, System.Collections.Generic.IReadOnlyDictionary<string, object>? Metadata = null) { }
+        public System.Collections.Generic.IReadOnlyDictionary<string, object>? Metadata { get; init; }
+        public string? Model { get; init; }
+        public int TokenCount { get; init; }
+        public System.Collections.Generic.IReadOnlyList<float> Vector { get; init; }
+    }
+    public sealed class PromptTurn : System.IEquatable<GenAI.Bridge.Contracts.PromptTurn>
+    {
+        public PromptTurn(string Role, string Content) { }
+        public string Content { get; init; }
+        public string Role { get; init; }
+    }
+    public sealed class ScenarioPrompt : System.IEquatable<GenAI.Bridge.Contracts.ScenarioPrompt>
+    {
+        public ScenarioPrompt(string ScenarioName, GenAI.Bridge.Contracts.CompletionPrompt InitialPrompt, System.Collections.Generic.IReadOnlyDictionary<string, object>? Context = null) { }
+        public System.Collections.Generic.IReadOnlyDictionary<string, object>? Context { get; init; }
+        public GenAI.Bridge.Contracts.CompletionPrompt InitialPrompt { get; init; }
+        public string ScenarioName { get; init; }
+    }
+}

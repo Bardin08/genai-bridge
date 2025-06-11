@@ -5,6 +5,10 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenAI.Bridge", "GenAI.Bridge\GenAI.Bridge.csproj", "{04AD9258-4A7F-4564-9D1E-142F05C8734A}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{48BCA330-4AF7-4826-8884-3C4157BB7099}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenAI.Bridge.Contracts.Tests", "GenAI.Bridge.Contracts.Tests\GenAI.Bridge.Contracts.Tests.csproj", "{4204CB75-03E0-49F9-BE22-BC3464CC59BA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,8 +31,23 @@ Global
 		{04AD9258-4A7F-4564-9D1E-142F05C8734A}.Release|x64.Build.0 = Release|Any CPU
 		{04AD9258-4A7F-4564-9D1E-142F05C8734A}.Release|x86.ActiveCfg = Release|Any CPU
 		{04AD9258-4A7F-4564-9D1E-142F05C8734A}.Release|x86.Build.0 = Release|Any CPU
+		{4204CB75-03E0-49F9-BE22-BC3464CC59BA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4204CB75-03E0-49F9-BE22-BC3464CC59BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4204CB75-03E0-49F9-BE22-BC3464CC59BA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{4204CB75-03E0-49F9-BE22-BC3464CC59BA}.Debug|x64.Build.0 = Debug|Any CPU
+		{4204CB75-03E0-49F9-BE22-BC3464CC59BA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4204CB75-03E0-49F9-BE22-BC3464CC59BA}.Debug|x86.Build.0 = Debug|Any CPU
+		{4204CB75-03E0-49F9-BE22-BC3464CC59BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4204CB75-03E0-49F9-BE22-BC3464CC59BA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4204CB75-03E0-49F9-BE22-BC3464CC59BA}.Release|x64.ActiveCfg = Release|Any CPU
+		{4204CB75-03E0-49F9-BE22-BC3464CC59BA}.Release|x64.Build.0 = Release|Any CPU
+		{4204CB75-03E0-49F9-BE22-BC3464CC59BA}.Release|x86.ActiveCfg = Release|Any CPU
+		{4204CB75-03E0-49F9-BE22-BC3464CC59BA}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{4204CB75-03E0-49F9-BE22-BC3464CC59BA} = {48BCA330-4AF7-4826-8884-3C4157BB7099}
 	EndGlobalSection
 EndGlobal
