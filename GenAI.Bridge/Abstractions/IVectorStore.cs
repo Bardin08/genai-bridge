@@ -14,15 +14,16 @@ public interface IVectorStore
     /// Inserts or updates a vector for a specific external resource ID.
     /// </summary>
     Task UpsertAsync(
-        string externalId,
+        Guid externalId,
         IReadOnlyList<float> vector,
+        Dictionary<string, string> payload,
         CancellationToken ct = default);
 
     /// <summary>
     /// Returns the most similar vectors (by cosine similarity or equivalent), ordered by score descending.
     /// </summary>
-    Task<IReadOnlyList<(string ExternalId, float Score)>> SearchAsync(
+    Task<IReadOnlyList<(Guid ExternalId, float Score, IReadOnlyList<float> Vector)>> SearchAsync(
         IReadOnlyList<float> queryVector,
-        int topK,
+        uint topK,
         CancellationToken ct = default);
 }
