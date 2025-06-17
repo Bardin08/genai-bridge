@@ -15,7 +15,7 @@ public interface IContextStore
     Task SaveTurnAsync(
         string sessionId,
         PromptTurn turn,
-        TimeSpan ttl,
+        TimeSpan? ttl = null,
         CancellationToken ct = default);
 
     /// <summary>
@@ -24,6 +24,6 @@ public interface IContextStore
     /// </summary>
     Task<IReadOnlyList<PromptTurn>> LoadTurnsAsync(
         string sessionId,
-        int maxTurns,
+        int? maxTurns = null,
         CancellationToken ct = default);
 }
