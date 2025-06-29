@@ -7,6 +7,23 @@ namespace GenAI.Bridge.Scenarios;
 
 internal static class ScenarioBuilder
 {
+    
+    public static ScenarioPrompt ConvertToScenarioPrompt(ScenarioDefinition definition)
+    {
+        var stages = definition.Stages.Select(ScenarioBuilder.ConstructStage).ToList();
+
+        return new ScenarioPrompt(
+            Name: definition.Name,
+            Stages: stages,
+            Metadata: new Dictionary<string, string>(definition.Metadata)
+            {
+                ["version"] = definition.Version,
+                ["description"] = definition.Description,
+                ["valid_models"] = string.Join(",", definition.ValidModels)
+            }
+        );
+    }
+
     #region User Prompt Construction
 
     private static PromptTurn ConstructUserPrompt(ScenarioStageDefinition stageDef, UserPromptDefinition promptDef)

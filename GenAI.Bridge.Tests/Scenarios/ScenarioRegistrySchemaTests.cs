@@ -13,7 +13,8 @@ public class ScenarioRegistrySchemaTests : IDisposable
 {
     private readonly string _testScenariosDirectory;
     private readonly Mock<IScenarioValidator> _mockValidator;
-    private readonly Mock<ILogger<ScenarioRegistry>> _mockLogger;
+    private readonly Mock<ILogger<FileScenarioStore>> _mockLogger;
+    private readonly Mock<ILogger<ScenarioRegistry>> _mockRegistryLogger;
 
     public ScenarioRegistrySchemaTests()
     {
@@ -24,7 +25,8 @@ public class ScenarioRegistrySchemaTests : IDisposable
         _mockValidator.Setup(v => v.Validate(It.IsAny<ScenarioDefinition>()))
             .Returns(new ValidationResult());
             
-        _mockLogger = new Mock<ILogger<ScenarioRegistry>>();
+        _mockLogger = new Mock<ILogger<FileScenarioStore>>();
+        _mockRegistryLogger = new Mock<ILogger<ScenarioRegistry>>();
     }
     
     [Fact]
@@ -53,10 +55,14 @@ public class ScenarioRegistrySchemaTests : IDisposable
         var filePath = Path.Combine(_testScenariosDirectory, $"{scenarioName}.yaml");
         await File.WriteAllTextAsync(filePath, scenarioContent);
         
-        var registry = new ScenarioRegistry(
+        var fileScenarioStore = new FileScenarioStore(
             _testScenariosDirectory, 
             _mockValidator.Object, 
-            logger: _mockLogger.Object);
+            _mockLogger.Object);
+
+        var registry = new ScenarioRegistry(
+            [fileScenarioStore], 
+            _mockRegistryLogger.Object);
             
         // Act
         var scenario = await registry.GetScenario(scenarioName);
@@ -114,11 +120,15 @@ public class ScenarioRegistrySchemaTests : IDisposable
 
         var filePath = Path.Combine(_testScenariosDirectory, $"{scenarioName}.yaml");
         await File.WriteAllTextAsync(filePath, scenarioContent);
-        
-        var registry = new ScenarioRegistry(
+
+        var fileScenarioStore = new FileScenarioStore(
             _testScenariosDirectory, 
             _mockValidator.Object, 
-            logger: _mockLogger.Object);
+            _mockLogger.Object);
+
+        var registry = new ScenarioRegistry(
+            [fileScenarioStore], 
+            _mockRegistryLogger.Object);
             
         // Act
         var scenario = await registry.GetScenario(scenarioName);
@@ -172,11 +182,15 @@ public class ScenarioRegistrySchemaTests : IDisposable
 
         var filePath = Path.Combine(_testScenariosDirectory, $"{scenarioName}.yaml");
         await File.WriteAllTextAsync(filePath, scenarioContent);
-        
-        var registry = new ScenarioRegistry(
+
+        var fileScenarioStore = new FileScenarioStore(
             _testScenariosDirectory, 
             _mockValidator.Object, 
-            logger: _mockLogger.Object);
+            _mockLogger.Object);
+
+        var registry = new ScenarioRegistry(
+            [fileScenarioStore], 
+            _mockRegistryLogger.Object);
             
         // Act
         var scenario = await registry.GetScenario(scenarioName);
@@ -241,10 +255,14 @@ public class ScenarioRegistrySchemaTests : IDisposable
         var filePath = Path.Combine(_testScenariosDirectory, $"{scenarioName}.yaml");
         await File.WriteAllTextAsync(filePath, scenarioContent);
         
-        var registry = new ScenarioRegistry(
+        var fileScenarioStore = new FileScenarioStore(
             _testScenariosDirectory, 
             _mockValidator.Object, 
-            logger: _mockLogger.Object);
+            _mockLogger.Object);
+
+        var registry = new ScenarioRegistry(
+            [fileScenarioStore], 
+            _mockRegistryLogger.Object);
             
         // Act
         var scenario = await registry.GetScenario(scenarioName);
@@ -301,10 +319,14 @@ public class ScenarioRegistrySchemaTests : IDisposable
         var filePath = Path.Combine(_testScenariosDirectory, $"{scenarioName}.yaml");
         await File.WriteAllTextAsync(filePath, scenarioContent);
         
-        var registry = new ScenarioRegistry(
+        var fileScenarioStore = new FileScenarioStore(
             _testScenariosDirectory, 
             _mockValidator.Object, 
-            logger: _mockLogger.Object);
+            _mockLogger.Object);
+
+        var registry = new ScenarioRegistry(
+            [fileScenarioStore], 
+            _mockRegistryLogger.Object);
             
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(async () => 
@@ -337,10 +359,14 @@ public class ScenarioRegistrySchemaTests : IDisposable
         var filePath = Path.Combine(_testScenariosDirectory, $"{scenarioName}.yaml");
         await File.WriteAllTextAsync(filePath, scenarioContent);
         
-        var registry = new ScenarioRegistry(
+        var fileScenarioStore = new FileScenarioStore(
             _testScenariosDirectory, 
             _mockValidator.Object, 
-            logger: _mockLogger.Object);
+            _mockLogger.Object);
+
+        var registry = new ScenarioRegistry(
+            [fileScenarioStore], 
+            _mockRegistryLogger.Object);
             
         // Act
         var scenario = await registry.GetScenario(scenarioName);

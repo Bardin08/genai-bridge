@@ -1,3 +1,4 @@
+using GenAI.Bridge.Contracts;
 using GenAI.Bridge.Scenarios.Models;
 
 namespace GenAI.Bridge.Abstractions;
@@ -12,14 +13,20 @@ public interface IRemoteScenarioStore
     /// </summary>
     /// <param name="scenarioName">Name of the scenario to retrieve.</param>
     /// <returns>The scenario if found, null otherwise.</returns>
-    Task<ScenarioDefinition?> GetScenarioAsync(string scenarioName);
-    
+    Task<ScenarioPrompt?> GetScenarioAsync(string scenarioName);
+
+    /// <summary>
+    /// Gets all scenarios matching the specified name.
+    /// </summary>
+    /// <returns>All existing scenarios or empty collection.</returns>
+    Task<List<ScenarioPrompt?>> GetAllScenariosAsync();
+
     /// <summary>
     /// Lists all available scenario names.
     /// </summary>
     /// <returns>Collection of scenario names.</returns>
     Task<IEnumerable<string>> ListScenarioNamesAsync();
-    
+
     /// <summary>
     /// Stores a scenario.
     /// </summary>
