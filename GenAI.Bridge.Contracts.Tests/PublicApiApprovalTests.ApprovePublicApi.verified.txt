@@ -3,8 +3,8 @@ namespace GenAI.Bridge.Abstractions
 {
     public interface IContextStore
     {
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<GenAI.Bridge.Contracts.PromptTurn>> LoadTurnsAsync(string sessionId, int maxTurns, System.Threading.CancellationToken ct = default);
-        System.Threading.Tasks.Task SaveTurnAsync(string sessionId, GenAI.Bridge.Contracts.PromptTurn turn, System.TimeSpan ttl, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<GenAI.Bridge.Contracts.PromptTurn>> LoadTurnsAsync(string sessionId, int? maxTurns = default, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.Task SaveTurnAsync(string sessionId, GenAI.Bridge.Contracts.PromptTurn turn, System.TimeSpan? ttl = default, System.Threading.CancellationToken ct = default);
     }
     public interface ICostEstimator
     {
@@ -27,18 +27,57 @@ namespace GenAI.Bridge.Abstractions
         string ResolveModelFor(GenAI.Bridge.Contracts.CompletionPrompt prompt);
         string ResolveModelFor(GenAI.Bridge.Contracts.ScenarioPrompt scenarioPrompt);
     }
+    public interface IRemoteScenarioStore
+    {
+        System.Threading.Tasks.Task<bool> DeleteScenarioAsync(string scenarioName);
+        System.Threading.Tasks.Task<GenAI.Bridge.Contracts.ScenarioDefinition?> GetScenarioAsync(string scenarioName);
+        System.Threading.Tasks.Task<System.Collections.Generic.IEnumerable<string>> ListScenarioNamesAsync();
+        System.Threading.Tasks.Task<bool> StoreScenarioAsync(GenAI.Bridge.Contracts.ScenarioDefinition scenario);
+    }
     public interface IScenarioRegistry
     {
-        GenAI.Bridge.Contracts.ScenarioPrompt GetScenario(string scenarioName);
+        System.Threading.Tasks.Task<GenAI.Bridge.Contracts.ScenarioPrompt> GetScenario(string scenarioName);
         System.Collections.Generic.IEnumerable<string> ListScenarioNames();
     }
     public interface IVectorStore
     {
         [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
                 "ExternalId",
-                "Score"})]
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<System.ValueTuple<string, float>>> SearchAsync(System.Collections.Generic.IReadOnlyList<float> queryVector, int topK, System.Threading.CancellationToken ct = default);
-        System.Threading.Tasks.Task UpsertAsync(string externalId, System.Collections.Generic.IReadOnlyList<float> vector, System.Threading.CancellationToken ct = default);
+                "Score",
+                "Vector"})]
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<System.ValueTuple<System.Guid, float, System.Collections.Generic.IReadOnlyList<float>>>> SearchAsync(System.Collections.Generic.IReadOnlyList<float> queryVector, uint topK, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.Task UpsertAsync(System.Guid externalId, System.Collections.Generic.IReadOnlyList<float> vector, System.Collections.Generic.Dictionary<string, string> payload, System.Threading.CancellationToken ct = default);
+    }
+}
+namespace GenAI.Bridge.Adapters
+{
+    public sealed class QdrantVectorStore : GenAI.Bridge.Abstractions.IVectorStore
+    {
+        public QdrantVectorStore(Qdrant.Client.QdrantClient qClient, string collectionName) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "ExternalId",
+                "Score",
+                "Vector"})]
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<System.ValueTuple<System.Guid, float, System.Collections.Generic.IReadOnlyList<float>>>> SearchAsync(System.Collections.Generic.IReadOnlyList<float> queryVector, uint topK, System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.Task UpsertAsync(System.Guid externalId, System.Collections.Generic.IReadOnlyList<float> vector, System.Collections.Generic.Dictionary<string, string> payload, System.Threading.CancellationToken ct = default) { }
+    }
+}
+namespace GenAI.Bridge.Context
+{
+    public class RedisContextStore : GenAI.Bridge.Abstractions.IContextStore, System.IDisposable
+    {
+        public RedisContextStore(StackExchange.Redis.ConnectionMultiplexer redis, GenAI.Bridge.Context.RedisContextStore.Options options) { }
+        public void Dispose() { }
+        protected virtual void Dispose(bool disposing) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<GenAI.Bridge.Contracts.PromptTurn>> LoadTurnsAsync(string sessionId, int? maxTurns = default, System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.Task SaveTurnAsync(string sessionId, GenAI.Bridge.Contracts.PromptTurn turn, System.TimeSpan? ttl = default, System.Threading.CancellationToken ct = default) { }
+        public class Options
+        {
+            public Options() { }
+            public int DefaultMaxTurns { get; init; }
+            public System.TimeSpan DefaultTtl { get; init; }
+            public string KeyPrefix { get; init; }
+        }
     }
 }
 namespace GenAI.Bridge.Contracts
@@ -77,17 +116,191 @@ namespace GenAI.Bridge.Contracts
         public int TokenCount { get; init; }
         public System.Collections.Generic.IReadOnlyList<float> Vector { get; init; }
     }
+    public sealed class FunctionCall : System.IEquatable<GenAI.Bridge.Contracts.FunctionCall>
+    {
+        public FunctionCall() { }
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string? Name { get; init; }
+        public static GenAI.Bridge.Contracts.FunctionCall Auto() { }
+        public static GenAI.Bridge.Contracts.FunctionCall Specific(string functionName) { }
+    }
+    public sealed class FunctionDefinition : System.IEquatable<GenAI.Bridge.Contracts.FunctionDefinition>
+    {
+        public FunctionDefinition() { }
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        public string? Description { get; init; }
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string Name { get; init; }
+        [System.Text.Json.Serialization.JsonPropertyName("parameters")]
+        public object Parameters { get; init; }
+    }
+    public sealed class FunctionDefinitionConfig : System.IEquatable<GenAI.Bridge.Contracts.FunctionDefinitionConfig>
+    {
+        public FunctionDefinitionConfig() { }
+        public string? Description { get; init; }
+        public string Name { get; init; }
+        public string Parameters { get; init; }
+        [YamlDotNet.Serialization.YamlMember(Alias="parameters_type")]
+        public string? ParametersType { get; init; }
+    }
+    public sealed class FunctionsConfig : System.IEquatable<GenAI.Bridge.Contracts.FunctionsConfig>
+    {
+        public FunctionsConfig() { }
+        [System.Text.Json.Serialization.JsonPropertyName("function_call")]
+        public GenAI.Bridge.Contracts.FunctionCall? FunctionCall { get; init; }
+        [System.Text.Json.Serialization.JsonPropertyName("functions")]
+        public System.Collections.Generic.IReadOnlyList<GenAI.Bridge.Contracts.FunctionDefinition> Functions { get; init; }
+    }
+    public sealed class FunctionsDefinition : System.IEquatable<GenAI.Bridge.Contracts.FunctionsDefinition>
+    {
+        public FunctionsDefinition() { }
+        [YamlDotNet.Serialization.YamlMember(Alias="function_call")]
+        public string? FunctionCall { get; init; }
+        public System.Collections.Generic.List<GenAI.Bridge.Contracts.FunctionDefinitionConfig> Functions { get; init; }
+    }
     public sealed class PromptTurn : System.IEquatable<GenAI.Bridge.Contracts.PromptTurn>
     {
-        public PromptTurn(string Role, string Content) { }
+        public PromptTurn(string Role, string Content, string? Name = null, System.Collections.Generic.IReadOnlyDictionary<string, object>? Parameters = null) { }
         public string Content { get; init; }
+        public GenAI.Bridge.Contracts.FunctionsConfig? Functions { get; }
+        public int? MaxTokens { get; }
+        public string? Name { get; init; }
+        public System.Collections.Generic.IReadOnlyDictionary<string, object>? Parameters { get; init; }
+        public GenAI.Bridge.Contracts.ResponseFormat? ResponseFormat { get; }
         public string Role { get; init; }
+        public float? Temperature { get; }
+        public System.Collections.Generic.IReadOnlyList<GenAI.Bridge.Contracts.Tool>? Tools { get; }
+        public float? TopP { get; }
+        public static GenAI.Bridge.Contracts.PromptTurn Assistant(string content, System.Collections.Generic.IReadOnlyDictionary<string, object>? parameters = null) { }
+        public static GenAI.Bridge.Contracts.PromptTurn Function(string name, string content, System.Collections.Generic.IReadOnlyDictionary<string, object>? parameters = null) { }
+        public static GenAI.Bridge.Contracts.PromptTurn System(string content, System.Collections.Generic.IReadOnlyDictionary<string, object>? parameters = null) { }
+        public static GenAI.Bridge.Contracts.PromptTurn User(string content, System.Collections.Generic.IReadOnlyDictionary<string, object>? parameters = null) { }
+        public static GenAI.Bridge.Contracts.PromptTurn UserWithJsonResponse(string content, System.Collections.Generic.IReadOnlyDictionary<string, object>? parameters = null) { }
+        public static GenAI.Bridge.Contracts.PromptTurn UserWithJsonSchema(string content, string schema, System.Collections.Generic.IReadOnlyDictionary<string, object>? parameters = null) { }
+    }
+    public sealed class ResponseFormat : System.IEquatable<GenAI.Bridge.Contracts.ResponseFormat>
+    {
+        public ResponseFormat() { }
+        [System.Text.Json.Serialization.JsonPropertyName("schema")]
+        public string? Schema { get; init; }
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        public GenAI.Bridge.Contracts.ResponseFormatType Type { get; init; }
+        public static GenAI.Bridge.Contracts.ResponseFormat Json() { }
+        public static GenAI.Bridge.Contracts.ResponseFormat JsonFromType<T>() { }
+        public static GenAI.Bridge.Contracts.ResponseFormat JsonWithSchema(string schema) { }
+        public static GenAI.Bridge.Contracts.ResponseFormat Text() { }
+    }
+    public sealed class ResponseFormatConfig : System.IEquatable<GenAI.Bridge.Contracts.ResponseFormatConfig>
+    {
+        public ResponseFormatConfig() { }
+        [YamlDotNet.Serialization.YamlMember(Alias="schema")]
+        public string? Schema { get; init; }
+        [YamlDotNet.Serialization.YamlMember(Alias="schema_type")]
+        public string? SchemaType { get; init; }
+        public string Type { get; init; }
+    }
+    public enum ResponseFormatType
+    {
+        Text = 0,
+        JsonObject = 1,
+    }
+    public sealed class ScenarioDefinition : System.IEquatable<GenAI.Bridge.Contracts.ScenarioDefinition>
+    {
+        public ScenarioDefinition() { }
+        public string Description { get; init; }
+        public System.Collections.Generic.Dictionary<string, string> Metadata { get; init; }
+        public string Name { get; init; }
+        public System.Collections.Generic.List<GenAI.Bridge.Contracts.ScenarioStage> Stages { get; init; }
+        public System.Collections.Generic.List<string> ValidModels { get; init; }
+        public string Version { get; init; }
     }
     public sealed class ScenarioPrompt : System.IEquatable<GenAI.Bridge.Contracts.ScenarioPrompt>
     {
-        public ScenarioPrompt(string ScenarioName, GenAI.Bridge.Contracts.CompletionPrompt InitialPrompt, System.Collections.Generic.IReadOnlyDictionary<string, object>? Context = null) { }
-        public System.Collections.Generic.IReadOnlyDictionary<string, object>? Context { get; init; }
-        public GenAI.Bridge.Contracts.CompletionPrompt InitialPrompt { get; init; }
-        public string ScenarioName { get; init; }
+        public ScenarioPrompt(string Name, System.Collections.Generic.IReadOnlyList<GenAI.Bridge.Contracts.PromptTurn> Turns, System.Collections.Generic.IReadOnlyDictionary<string, string>? Metadata = null) { }
+        public string? Author { get; }
+        public string? Category { get; }
+        public string? Description { get; }
+        public System.Collections.Generic.IReadOnlyDictionary<string, string>? Metadata { get; init; }
+        public string Name { get; init; }
+        public System.Collections.Generic.IReadOnlyList<GenAI.Bridge.Contracts.PromptTurn> Turns { get; init; }
+        public System.Collections.Generic.IEnumerable<string>? ValidModels { get; }
+        public string? Version { get; }
+        public static GenAI.Bridge.Contracts.ScenarioPrompt Create(string name, string systemPrompt, string userPrompt, System.Collections.Generic.IReadOnlyDictionary<string, object>? parameters = null, System.Collections.Generic.IReadOnlyDictionary<string, string>? metadata = null) { }
+    }
+    public sealed class ScenarioStage : System.IEquatable<GenAI.Bridge.Contracts.ScenarioStage>
+    {
+        public ScenarioStage() { }
+        public GenAI.Bridge.Contracts.FunctionsDefinition? Functions { get; init; }
+        public int? MaxTokens { get; init; }
+        public string Name { get; init; }
+        public System.Collections.Generic.Dictionary<string, object> Parameters { get; init; }
+        public GenAI.Bridge.Contracts.ResponseFormatConfig? ResponseFormat { get; init; }
+        public string SystemPrompt { get; init; }
+        public float? Temperature { get; init; }
+        public System.Collections.Generic.List<GenAI.Bridge.Contracts.ToolDefinition>? Tools { get; init; }
+        public float? TopP { get; init; }
+        public string UserPromptTemplate { get; init; }
+    }
+    public sealed class Tool : System.IEquatable<GenAI.Bridge.Contracts.Tool>
+    {
+        public Tool() { }
+        [System.Text.Json.Serialization.JsonPropertyName("function")]
+        public GenAI.Bridge.Contracts.FunctionDefinition Function { get; init; }
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        public string Type { get; init; }
+        public static GenAI.Bridge.Contracts.Tool FunctionTool(string name, string description, object parameters) { }
+    }
+    public sealed class ToolDefinition : System.IEquatable<GenAI.Bridge.Contracts.ToolDefinition>
+    {
+        public ToolDefinition() { }
+        public GenAI.Bridge.Contracts.FunctionDefinitionConfig Function { get; init; }
+        public string Type { get; init; }
+    }
+}
+namespace GenAI.Bridge.Scenarios
+{
+    public class ScenarioRegistry : GenAI.Bridge.Abstractions.IScenarioRegistry
+    {
+        public ScenarioRegistry(string scenariosDirectory, GenAI.Bridge.Scenarios.Validation.IScenarioValidator validator, GenAI.Bridge.Abstractions.IRemoteScenarioStore? remoteStore = null, bool preferRemoteStore = true, Microsoft.Extensions.Logging.ILogger<GenAI.Bridge.Scenarios.ScenarioRegistry>? logger = null) { }
+        public System.Threading.Tasks.Task<GenAI.Bridge.Contracts.ScenarioPrompt> GetScenario(string scenarioName) { }
+        public System.Collections.Generic.IEnumerable<string> ListScenarioNames() { }
+    }
+}
+namespace GenAI.Bridge.Scenarios.Validation
+{
+    public interface IScenarioValidator
+    {
+        GenAI.Bridge.Scenarios.Validation.ValidationResult Validate(GenAI.Bridge.Contracts.ScenarioDefinition scenario);
+    }
+    public class ScenarioValidator : GenAI.Bridge.Scenarios.Validation.IScenarioValidator
+    {
+        public ScenarioValidator() { }
+        public GenAI.Bridge.Scenarios.Validation.ValidationResult Validate(GenAI.Bridge.Contracts.ScenarioDefinition scenario) { }
+    }
+    public sealed class ValidationError : System.IEquatable<GenAI.Bridge.Scenarios.Validation.ValidationError>
+    {
+        public ValidationError() { }
+        public string Message { get; init; }
+        public string PropertyName { get; init; }
+    }
+    public class ValidationResult
+    {
+        public ValidationResult() { }
+        public System.Collections.Generic.List<GenAI.Bridge.Scenarios.Validation.ValidationError> Errors { get; }
+        public bool IsValid { get; }
+    }
+}
+namespace GenAI.Bridge.Utils
+{
+    public static class OpenAiJsonSchemaGenerator
+    {
+        public static string GenerateSchema(System.Type type, string schemaName, string? description = null) { }
+        public static string GenerateSchema<T>(string schemaName, string? description = null) { }
+    }
+    public static class TypeResolver
+    {
+        public static string? GenerateSchemaFromTypeName(string typeName) { }
+        public static void RefreshTypeCache() { }
+        public static System.Type? ResolveType(string typeName) { }
     }
 }
