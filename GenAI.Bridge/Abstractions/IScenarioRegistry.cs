@@ -11,7 +11,7 @@ public interface IScenarioRegistry
     /// <summary>
     /// Gets a scenario by name.
     /// </summary>
-    ScenarioPrompt GetScenario(string scenarioName);
+    Task<ScenarioPrompt> GetScenario(string scenarioName);
 
     /// <summary>
     /// Lists all available scenario names.

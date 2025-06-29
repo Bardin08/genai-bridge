@@ -1,8 +1,4 @@
-﻿using Xunit;
-using System.Net.Http;
-using System.Net.Http.Json;
-using System.Threading.Tasks;
-using GenAI.Bridge.Adapters;
+﻿using GenAI.Bridge.Adapters;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
 
