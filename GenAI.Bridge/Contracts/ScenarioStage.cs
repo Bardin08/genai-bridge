@@ -7,7 +7,7 @@ public sealed record ScenarioStage(
     string Name,
     IReadOnlyList<PromptTurn> Turns,
     string? Model = null,
-    IReadOnlyDictionary<string, object>? StageParams = null)
+    IReadOnlyDictionary<string, object>? Parameters = null)
 {
     /// <summary>
     /// Builds multiple CompletionPrompts from this scenario stage, one for each user turn.
@@ -36,8 +36,8 @@ public sealed record ScenarioStage(
         foreach (var userTurn in userTurns)
         {
             // Create metadata from stage parameters
-            var metadata = StageParams != null 
-                ? new Dictionary<string, object>(StageParams) 
+            var metadata = Parameters != null 
+                ? new Dictionary<string, object>(Parameters) 
                 : new Dictionary<string, object>();
 
             // Create relevant history for this user turn

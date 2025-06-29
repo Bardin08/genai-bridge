@@ -1,6 +1,7 @@
 using System.Text.Json;
 using GenAI.Bridge.Contracts;
 using GenAI.Bridge.Scenarios;
+using GenAI.Bridge.Scenarios.Models;
 using GenAI.Bridge.Scenarios.Validation;
 using GenAI.Bridge.Utils;
 using Microsoft.Extensions.Logging;
@@ -40,11 +41,13 @@ public class ScenarioRegistrySchemaTests : IDisposable
                                        metadata: 
                                          category: test
                                        stages:
-                                         - systemPrompt: 'You are a helpful assistant.'
-                                           userPromptTemplate: 'Hello, please provide customer information.'
-                                           responseFormat:
-                                             type: json_object
-                                             schemaType: 'CustomerInfo'
+                                         - name: SchemaStage
+                                           systemPrompt: 'You are a helpful assistant.'
+                                           userPrompts:
+                                             - template: 'Hello, please provide customer information.'
+                                               responseFormatConfig:
+                                                 type: jsonSchema
+                                                 responseTypeName: 'CustomerInfo'
                                        """;
 
         var filePath = Path.Combine(_testScenariosDirectory, $"{scenarioName}.yaml");
@@ -60,14 +63,14 @@ public class ScenarioRegistrySchemaTests : IDisposable
         
         // Assert
         Assert.NotNull(scenario);
-        Assert.Equal(2, scenario.Turns.Count);
+        Assert.Single(scenario.Stages);
         
-        var userTurn = scenario.Turns[^1];
+        var userTurn = scenario.Stages[0].Turns[^1];
         Assert.Equal("Hello, please provide customer information.", userTurn.Content);
         
         var responseFormat = userTurn.Parameters!["response_format"] as ResponseFormat;
         Assert.NotNull(responseFormat);
-        Assert.Equal(ResponseFormatType.JsonObject, responseFormat.Type);
+        Assert.Equal(ResponseFormatType.JsonSchema, responseFormat.Type);
         Assert.NotNull(responseFormat.Schema);
         
         // Verify schema structure contains the CustomerInfo properties
@@ -92,19 +95,21 @@ public class ScenarioRegistrySchemaTests : IDisposable
                                        metadata: 
                                          category: test
                                        stages:
-                                         - systemPrompt: 'You are a helpful assistant.'
-                                           userPromptTemplate: 'Hello, please provide person information.'
-                                           responseFormat:
-                                             type: json_object
-                                             schema: |
-                                                 {
-                                                     "type": "object",
-                                                     "properties": {
-                                                         "name": { "type": "string" },
-                                                         "age": { "type": "integer" }
-                                                     },
-                                                     "required": ["name", "age"]
-                                                 }
+                                         - name: SchemaStage
+                                           systemPrompt: 'You are a helpful assistant.'
+                                           userPrompts:
+                                             - template: 'Hello, please provide person information.'
+                                               responseFormatConfig:
+                                                 type: jsonSchema
+                                                 schema: |
+                                                     {
+                                                         "type": "object",
+                                                         "properties": {
+                                                             "name": { "type": "string" },
+                                                             "age": { "type": "integer" }
+                                                         },
+                                                         "required": ["name", "age"]
+                                                     }
                                        """;
 
         var filePath = Path.Combine(_testScenariosDirectory, $"{scenarioName}.yaml");
@@ -120,10 +125,14 @@ public class ScenarioRegistrySchemaTests : IDisposable
         
         // Assert
         Assert.NotNull(scenario);
-        var userTurn = scenario.Turns[^1];
+        Assert.Single(scenario.Stages);
+        
+        var userTurn = scenario.Stages[0].Turns[^1];
+        Assert.Equal("Hello, please provide person information.", userTurn.Content);
+        
         var responseFormat = userTurn.Parameters!["response_format"] as ResponseFormat;
         Assert.NotNull(responseFormat);
-        Assert.Equal(ResponseFormatType.JsonObject, responseFormat.Type);
+        Assert.Equal(ResponseFormatType.JsonSchema, responseFormat.Type);
         
         // Verify the explicit schema was used
         var schemaObj = JsonDocument.Parse(responseFormat.Schema!).RootElement;
@@ -147,8 +156,11 @@ public class ScenarioRegistrySchemaTests : IDisposable
                                        metadata: 
                                          category: test
                                        stages:
-                                         - systemPrompt: 'You are a helpful assistant.'
-                                           userPromptTemplate: 'Hello, please book a flight.'
+                                         - name: FunctionStage
+                                           systemPrompt: 'You are a helpful assistant.'
+                                           userPrompts:
+                                             - template: 'Hello, please book a flight.'
+                                               parameters: {}
                                            functions:
                                              functions:
                                                - name: bookFlight
@@ -171,15 +183,21 @@ public class ScenarioRegistrySchemaTests : IDisposable
         
         // Assert
         Assert.NotNull(scenario);
-        var userTurn = scenario.Turns[^1];
-        var functionsConfig = userTurn.Parameters!["functions"] as FunctionsConfig;
+        Assert.Single(scenario.Stages);
+
+        var stage = scenario.Stages[0];
+
+        var userTurn = stage.Turns[^1];
+        Assert.Equal("Hello, please book a flight.", userTurn.Content);
+
+        var functionsConfig = stage.Parameters!["functions"] as FunctionsConfig;
         Assert.NotNull(functionsConfig);
         Assert.Single(functionsConfig.Functions);
-        
+
         var function = functionsConfig.Functions[0];
         Assert.Equal("bookFlight", function.Name);
         Assert.Equal("Book a flight for the user", function.Description);
-        
+
         // Get the parameters JsonElement
         var parametersElement = (JsonElement)function.Parameters;
         var schema = parametersElement.GetProperty("schema");
@@ -207,8 +225,11 @@ public class ScenarioRegistrySchemaTests : IDisposable
                                        metadata: 
                                          category: test
                                        stages:
-                                         - systemPrompt: 'You are a helpful assistant.'
-                                           userPromptTemplate: 'Hello, please search for some information.'
+                                         - name: ToolStage
+                                           systemPrompt: 'You are a helpful assistant.'
+                                           userPrompts:
+                                             - template: 'Hello, please search for some information.'
+                                               parameters: {}
                                            tools:
                                              - type: function
                                                function:
@@ -230,8 +251,14 @@ public class ScenarioRegistrySchemaTests : IDisposable
         
         // Assert
         Assert.NotNull(scenario);
-        var userTurn = scenario.Turns[^1];
-        var tools = userTurn.Parameters!["tools"] as List<Tool>;
+        Assert.Single(scenario.Stages);
+        
+        var stage = scenario.Stages[0];
+        
+        var userTurn = stage.Turns[^1];
+        Assert.Equal("Hello, please search for some information.", userTurn.Content);
+        
+        var tools = stage.Parameters!["tools"] as List<Tool>;
         Assert.NotNull(tools);
         Assert.Single(tools);
         
@@ -254,21 +281,23 @@ public class ScenarioRegistrySchemaTests : IDisposable
     public async Task GetScenario_WithMissingSchema_ThrowsException()
     {
         // Arrange
-        var scenarioName = "TestScenarioWithMissingSchema";
-        var scenarioContent = @"
-name: TestScenarioWithMissingSchema
-version: '1.0'
-description: 'Test scenario with missing schema'
-validModels: ['gpt-4']
-metadata: 
-  category: test
-stages:
-  - systemPrompt: 'You are a helpful assistant.'
-    userPromptTemplate: 'Hello, please provide customer information.'
-    responseFormat:
-      type: json_object
-      # Missing both schema and schemaType
-";
+        const string scenarioName = "TestScenarioWithMissingSchema";
+        const string scenarioContent = """
+                                       name: TestScenarioWithMissingSchema
+                                       version: '1.0'
+                                       description: 'Test scenario with missing schema'
+                                       validModels: ['gpt-4']
+                                       metadata: 
+                                         category: test
+                                       stages:
+                                         - name: MissingSchemaStage
+                                           systemPrompt: 'You are a helpful assistant.'
+                                           userPrompts:
+                                             - template: 'Hello, please provide customer information.'
+                                               responseFormatConfig:
+                                                 type: json_schema
+                                                 # Missing both schema and responseTypeName
+                                       """;
         var filePath = Path.Combine(_testScenariosDirectory, $"{scenarioName}.yaml");
         await File.WriteAllTextAsync(filePath, scenarioContent);
         
@@ -296,11 +325,13 @@ stages:
                                        metadata: 
                                          category: test
                                        stages:
-                                         - systemPrompt: 'You are a helpful assistant.'
-                                           userPromptTemplate: 'Hello.'
-                                           responseFormat:
-                                             type: json_object
-                                             schemaType: 'NonExistentType'
+                                         - name: InvalidSchemaStage
+                                           systemPrompt: 'You are a helpful assistant.'
+                                           userPrompts:
+                                             - template: 'Hello.'
+                                               responseFormatConfig:
+                                                 type: jsonSchema
+                                                 responseTypeName: 'NonExistentType'
 
                                        """;
         var filePath = Path.Combine(_testScenariosDirectory, $"{scenarioName}.yaml");
@@ -316,7 +347,11 @@ stages:
         
         // Assert
         Assert.NotNull(scenario);
-        var userTurn = scenario.Turns[^1];
+        Assert.Single(scenario.Stages);
+        
+        var userTurn = scenario.Stages[0].Turns[^1];
+        Assert.Equal("Hello.", userTurn.Content);
+        
         var responseFormat = userTurn.Parameters!["response_format"] as ResponseFormat;
         Assert.NotNull(responseFormat);
         Assert.Equal(ResponseFormatType.JsonObject, responseFormat.Type);

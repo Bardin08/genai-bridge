@@ -9,7 +9,7 @@ internal static class ScenarioBuilder
 {
     #region User Prompt Construction
 
-    public static PromptTurn ConstructUserPrompt(ScenarioStageDefinition stageDef, UserPromptDefinition promptDef)
+    private static PromptTurn ConstructUserPrompt(ScenarioStageDefinition stageDef, UserPromptDefinition promptDef)
     {
         var parameters = ConstructUserPromptParameters(stageDef, promptDef);
 
@@ -101,7 +101,7 @@ internal static class ScenarioBuilder
             Name: stageDef.Name,
             Turns: turns,
             Model: stageDef.Model,
-            StageParams: stageParameters
+            Parameters: stageParameters
         );
         return stage;
     }

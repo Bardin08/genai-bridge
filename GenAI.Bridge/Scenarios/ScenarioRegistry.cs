@@ -5,6 +5,7 @@ using GenAI.Bridge.Contracts;
 using GenAI.Bridge.Scenarios.Models;
 using GenAI.Bridge.Scenarios.Validation;
 using Microsoft.Extensions.Logging;
+using YamlDotNet.Core;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -209,26 +210,41 @@ public class ScenarioRegistry : IScenarioRegistry
 
     private async Task<ScenarioPrompt?> LoadScenarioFromFileAsync(string filePath)
     {
-        var fileContent = await File.ReadAllTextAsync(filePath);
-        var fileExtension = Path.GetExtension(filePath).ToLowerInvariant();
-
-        var scenarioDefinition = fileExtension == ".json"
-            ? JsonSerializer.Deserialize<ScenarioDefinition>(fileContent, JsonSerializerOptions)!
-            : _yamlDeserializer.Deserialize<ScenarioDefinition>(fileContent);
-
-        var validationResult = _validator.Validate(scenarioDefinition);
-        if (!validationResult.IsValid)
+        try
         {
-            var errorMessage = string.Join("; ", validationResult.Errors.Select(e => e.Message));
-            _logger?.LogWarning("Scenario validation failed for {File}: {Errors}", filePath, errorMessage);
-            return null;
+            var fileContent = await File.ReadAllTextAsync(filePath);
+            var fileExtension = Path.GetExtension(filePath).ToLowerInvariant();
+
+            var scenarioDefinition = fileExtension == ".json"
+                ? JsonSerializer.Deserialize<ScenarioDefinition>(fileContent, JsonSerializerOptions)!
+                : _yamlDeserializer.Deserialize<ScenarioDefinition>(fileContent);
+
+            var validationResult = _validator.Validate(scenarioDefinition);
+            if (!validationResult.IsValid)
+            {
+                var errorMessage = string.Join("; ", validationResult.Errors.Select(e => e.Message));
+                _logger?.LogWarning("Scenario validation failed for {File}: {Errors}", filePath, errorMessage);
+                return null;
+            }
+
+            // Convert to ScenarioPrompt and add to cache
+            var scenarioPrompt = ConvertToScenarioPrompt(scenarioDefinition);
+
+            _logger?.LogInformation("Loaded scenario: {Name} from {File}", scenarioDefinition.Name, filePath);
+            return scenarioPrompt;
         }
-
-        // Convert to ScenarioPrompt and add to cache
-        var scenarioPrompt = ConvertToScenarioPrompt(scenarioDefinition);
-
-        _logger?.LogInformation("Loaded scenario: {Name} from {File}", scenarioDefinition.Name, filePath);
-        return scenarioPrompt;
+        catch (YamlException e)
+        {
+            throw new ArgumentException($"Failed to parse YAML scenario file: {filePath}", e);
+        }
+        catch (JsonException e)
+        {
+            throw new ArgumentException($"Failed to parse JSON scenario file: {filePath}", e);
+        }
+        catch (Exception)
+        {
+            throw new ArgumentException($"Unexpected error loading scenario from file: {filePath}", filePath);
+        }
     }
 
     private async Task LoadAllScenariosFromRemoteStorageAsync()
