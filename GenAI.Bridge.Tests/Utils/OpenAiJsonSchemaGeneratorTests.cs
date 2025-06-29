@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using GenAI.Bridge.Utils;
 
-namespace GenAI.Bridge.Contracts.Tests.Utils;
+namespace GenAI.Bridge.Tests.Utils;
 
 public class OpenAiJsonSchemaGeneratorTests
 {
@@ -96,7 +96,7 @@ public class OpenAiJsonSchemaGeneratorTests
     public void GenerateSchema_WithArrayProperty_ReturnsValidSchema()
     {
         // Arrange
-        var schemaName = "ArrayTypeSchema";
+        const string schemaName = "ArrayTypeSchema";
 
         // Act
         var schema = OpenAiJsonSchemaGenerator.GenerateSchema<TypeWithArray>(schemaName);

@@ -1,7 +1,7 @@
 using System.Reflection;
 using GenAI.Bridge.Utils;
 
-namespace GenAI.Bridge.Contracts.Tests.Utils;
+namespace GenAI.Bridge.Tests.Utils;
 
 public class TypeResolverTests
 {
@@ -94,9 +94,9 @@ public class TypeResolverTests
 
         // Assert
         Assert.NotNull(schema);
-        Assert.Contains("TestClass", schema);
-        Assert.Contains("StringProperty", schema);
-        Assert.Contains("IntProperty", schema);
+        Assert.Contains("DummyTestClass", schema);
+        Assert.Contains("stringProperty", schema);
+        Assert.Contains("intProperty", schema);
     }
 
     [Fact]
