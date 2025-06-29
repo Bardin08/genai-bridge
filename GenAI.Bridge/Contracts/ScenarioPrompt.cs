@@ -5,7 +5,7 @@ namespace GenAI.Bridge.Contracts;
 /// </summary>
 public sealed record ScenarioPrompt(
     string Name,
-    IReadOnlyList<PromptTurn> Turns,
+    IReadOnlyList<ScenarioStage> Stages,
     IReadOnlyDictionary<string, string>? Metadata = null)
 {
     /// <summary>
@@ -21,7 +21,7 @@ public sealed record ScenarioPrompt(
     /// <summary>
     /// Gets the list of valid models for this scenario.
     /// </summary>
-    public IEnumerable<string>? ValidModels =>
+    public IReadOnlyList<string>? ValidModels =>
         Metadata?.TryGetValue("valid_models", out var modelsStr) == true
             ? modelsStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             : null;
@@ -35,29 +35,14 @@ public sealed record ScenarioPrompt(
     /// Gets the author of the scenario.
     /// </summary>
     public string? Author => Metadata?.TryGetValue("author", out var author) == true ? author : null;
-    
+
     /// <summary>
-    /// Creates a new scenario prompt with a single system and user turn.
+    /// Finds a stage by name.
     /// </summary>
-    /// <param name="name">The name of the scenario.</param>
-    /// <param name="systemPrompt">The system prompt content.</param>
-    /// <param name="userPrompt">The user prompt content.</param>
-    /// <param name="parameters">Optional parameters for the scenario.</param>
-    /// <param name="metadata">Optional metadata for the scenario.</param>
-    /// <returns>A new ScenarioPrompt instance.</returns>
-    public static ScenarioPrompt Create(
-        string name,
-        string systemPrompt,
-        string userPrompt,
-        IReadOnlyDictionary<string, object>? parameters = null,
-        IReadOnlyDictionary<string, string>? metadata = null)
+    /// <param name="stageName">The name of the stage to find.</param>
+    /// <returns>The stage if found, null otherwise.</returns>
+    public ScenarioStage? FindStage(string stageName)
     {
-        var turns = new List<PromptTurn>
-        {
-            PromptTurn.System(systemPrompt),
-            PromptTurn.User(userPrompt, parameters)
-        };
-        
-        return new ScenarioPrompt(name, turns, metadata);
+        return Stages.FirstOrDefault(s => string.Equals(s.Name, stageName, StringComparison.OrdinalIgnoreCase));
     }
 }

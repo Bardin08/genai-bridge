@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using GenAI.Bridge.Abstractions;
 using GenAI.Bridge.Contracts;
+using GenAI.Bridge.Scenarios.Models;
 using GenAI.Bridge.Scenarios.Validation;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
@@ -289,23 +290,13 @@ public class ScenarioRegistry : IScenarioRegistry
         }
     }
 
-    private ScenarioPrompt ConvertToScenarioPrompt(ScenarioDefinition definition)
+    private static ScenarioPrompt ConvertToScenarioPrompt(ScenarioDefinition definition)
     {
-        var turns = new List<PromptTurn>();
-
-        foreach (var stage in definition.Stages)
-        {
-            if (!string.IsNullOrWhiteSpace(stage.SystemPrompt))
-            {
-                turns.Add(PromptTurn.System(stage.SystemPrompt));
-            }
-
-            ConstructStage(stage, turns);
-        }
+        var stages = definition.Stages.Select(ScenarioBuilder.ConstructStage).ToList();
 
         return new ScenarioPrompt(
             Name: definition.Name,
-            Turns: turns,
+            Stages: stages,
             Metadata: new Dictionary<string, string>(definition.Metadata)
             {
                 ["version"] = definition.Version,
@@ -313,191 +304,5 @@ public class ScenarioRegistry : IScenarioRegistry
                 ["valid_models"] = string.Join(",", definition.ValidModels)
             }
         );
-    }
-
-    private void ConstructStage(ScenarioStage stage, List<PromptTurn> turns)
-    {
-        var parameters = new Dictionary<string, object>(stage.Parameters);
-
-        if (stage.Temperature.HasValue) parameters["temperature"] = stage.Temperature.Value;
-        if (stage.TopP.HasValue) parameters["top_p"] = stage.TopP.Value;
-        if (stage.MaxTokens.HasValue) parameters["max_tokens"] = stage.MaxTokens.Value;
-
-        FillStageResponseFormat(stage, parameters);
-        AddStageFunctions(stage, parameters);
-        AddStageTools(stage, parameters);
-
-        turns.Add(PromptTurn.User(stage.UserPromptTemplate, parameters));
-    }
-
-    private void FillStageResponseFormat(ScenarioStage stage, Dictionary<string, object> parameters)
-    {
-        if (stage.ResponseFormat == null)
-            return;
-
-        var responseFormatType = stage.ResponseFormat.Type.ToLowerInvariant() switch
-        {
-            "json_object" => ResponseFormatType.JsonObject,
-            "json" => ResponseFormatType.JsonObject,
-            _ => ResponseFormatType.Text
-        };
-
-        if (responseFormatType is ResponseFormatType.Text)
-        {
-            parameters["response_format"] = ResponseFormat.Text();
-            return;
-        }
-
-        GetResponseJsonSchema(stage, parameters);
-    }
-
-    private void GetResponseJsonSchema(ScenarioStage stage, Dictionary<string, object> parameters)
-    {
-        ResponseFormat? responseFormat;
-
-        // Check for schema_type first (C# type reference)
-        if (!string.IsNullOrWhiteSpace(stage.ResponseFormat!.SchemaType))
-        {
-            var schema = Utils.TypeResolver.GenerateSchemaFromTypeName(stage.ResponseFormat.SchemaType);
-            responseFormat = schema != null
-                ? ResponseFormat.JsonWithSchema(schema)
-                : ResponseFormat.Json();
-
-            _logger?.LogInformation("Generated schema from type: {Type}", stage.ResponseFormat.SchemaType);
-        }
-        // Then check for explicit schema
-        else if (!string.IsNullOrWhiteSpace(stage.ResponseFormat.Schema))
-        {
-            responseFormat = ResponseFormat.JsonWithSchema(stage.ResponseFormat.Schema);
-        }
-        else
-        {
-            throw new ArgumentException("No response schema specified. Reference a C# type or provide a JSON schema.");
-        }
-
-        parameters["response_format"] = responseFormat;
-    }
-
-    private void AddStageFunctions(ScenarioStage stage, Dictionary<string, object> parameters)
-    {
-        if (stage.Functions is not { Functions.Count: > 0 })
-            return;
-
-        var functions = new List<FunctionDefinition>();
-        foreach (var func in stage.Functions.Functions)
-        {
-            BuildFunction(func, functions);
-        }
-
-        var functionCall = stage.Functions.FunctionCall != null
-            ? new FunctionCall { Name = stage.Functions.FunctionCall == "auto" ? null : stage.Functions.FunctionCall }
-            : null;
-
-        parameters["functions"] = new FunctionsConfig
-        {
-            Functions = functions,
-            FunctionCall = functionCall
-        };
-    }
-
-    private void BuildFunction(FunctionDefinitionConfig func, List<FunctionDefinition> functions)
-    {
-        var parametersSchema = func.Parameters;
-
-        // If parameters_type is specified, generate schema from the C# type
-        if (!string.IsNullOrWhiteSpace(func.ParametersType))
-        {
-            var generatedSchema = Utils.TypeResolver.GenerateSchemaFromTypeName(func.ParametersType);
-            if (generatedSchema != null)
-            {
-                parametersSchema = generatedSchema;
-                _logger?.LogInformation("Generated function parameters schema from type: {Type}",
-                    func.ParametersType);
-            }
-            else
-            {
-                _logger?.LogWarning("Failed to generate function parameters schema from type: {Type}",
-                    func.ParametersType);
-            }
-        }
-
-        // Parse the parameters JSON string to object
-        object parametersObject;
-        try
-        {
-            parametersObject = JsonDocument.Parse(parametersSchema).RootElement;
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogWarning(ex, "Failed to parse function parameters JSON for function: {Name}",
-                func.Name);
-            parametersObject = new { };
-        }
-
-        functions.Add(new FunctionDefinition
-        {
-            Name = func.Name,
-            Description = func.Description,
-            Parameters = parametersObject
-        });
-    }
-
-    private void AddStageTools(ScenarioStage stage, Dictionary<string, object> parameters)
-    {
-        if (stage.Tools is not { Count: > 0 })
-            return;
-
-        var tools = new List<Tool>();
-        foreach (var tool in stage.Tools)
-        {
-            BuildTool(tool, tools);
-        }
-
-        parameters["tools"] = tools;
-    }
-
-    private void BuildTool(ToolDefinition tool, List<Tool> tools)
-    {
-        var parametersSchema = tool.Function.Parameters;
-
-        if (!string.IsNullOrWhiteSpace(tool.Function.ParametersType))
-        {
-            var generatedSchema = Utils.TypeResolver.GenerateSchemaFromTypeName(tool.Function.ParametersType);
-            if (generatedSchema != null)
-            {
-                parametersSchema = generatedSchema;
-                _logger?.LogInformation("Generated tool parameters schema from type: {Type}",
-                    tool.Function.ParametersType);
-            }
-            else
-            {
-                _logger?.LogWarning("Failed to generate tool parameters schema from type: {Type}",
-                    tool.Function.ParametersType);
-            }
-        }
-
-        // Parse the parameters JSON string to object
-        object parametersObject;
-        try
-        {
-            parametersObject = JsonDocument.Parse(parametersSchema).RootElement;
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogWarning(ex, "Failed to parse tool parameters JSON for function: {Name}",
-                tool.Function.Name);
-            parametersObject = new { };
-        }
-
-        tools.Add(new Tool
-        {
-            Type = tool.Type,
-            Function = new FunctionDefinition
-            {
-                Name = tool.Function.Name,
-                Description = tool.Function.Description,
-                Parameters = parametersObject
-            }
-        });
     }
 }

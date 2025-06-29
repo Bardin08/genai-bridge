@@ -1,4 +1,4 @@
-namespace GenAI.Bridge.Contracts;
+namespace GenAI.Bridge.Scenarios.Models;
 
 /// <summary>
 /// Represents a scenario definition that can be loaded from a YAML/JSON file.
@@ -23,7 +23,7 @@ public sealed record ScenarioDefinition
     /// <summary>
     /// The ordered stages of the scenario.
     /// </summary>
-    public List<ScenarioStage> Stages { get; init; } = [];
+    public List<ScenarioStageDefinition> Stages { get; init; } = [];
     
     /// <summary>
     /// Optional metadata for the scenario.

@@ -23,7 +23,7 @@ public sealed record FunctionDefinition
     /// Gets or sets the parameters schema for the function.
     /// </summary>
     [JsonPropertyName("parameters")]
-    public object Parameters { get; init; } = new object();
+    public object Parameters { get; init; } = new();
 }
 
 /// <summary>
@@ -41,7 +41,7 @@ public sealed record FunctionCall
     /// Creates a configuration that allows the model to automatically choose a function.
     /// </summary>
     /// <returns>A function call configuration for auto function selection.</returns>
-    public static FunctionCall Auto() => new();
+    public static FunctionCall Auto() => new() { Name = "auto" };
     
     /// <summary>
     /// Creates a configuration that forces the model to call a specific function.

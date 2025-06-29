@@ -1,4 +1,4 @@
-using YamlDotNet.Serialization;
+using GenAI.Bridge.Scenarios.Models;
 
 namespace GenAI.Bridge.Contracts;
 
@@ -15,6 +15,5 @@ public sealed record FunctionsDefinition
     /// <summary>
     /// Gets or sets the specific function to call, or "auto" to let the model choose.
     /// </summary>
-    [YamlMember(Alias = "function_call")]
     public string? FunctionCall { get; init; }
 }

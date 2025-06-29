@@ -1,6 +1,6 @@
-using YamlDotNet.Serialization;
+using GenAI.Bridge.Contracts;
 
-namespace GenAI.Bridge.Contracts;
+namespace GenAI.Bridge.Scenarios.Models;
 
 /// <summary>
 /// Configuration for response format in a scenario stage.
@@ -10,17 +10,15 @@ public sealed record ResponseFormatConfig
     /// <summary>
     /// Gets or sets the type of response format.
     /// </summary>
-    public string Type { get; init; } = "text";
+    public ResponseFormatType Type { get; init; } = ResponseFormatType.Text;
     
     /// <summary>
     /// Gets or sets the schema for JSON responses as a string, if applicable.
     /// </summary>
-    [YamlMember(Alias = "schema")]
     public string? Schema { get; init; }
     
     /// <summary>
     /// Gets or sets the C# type name to generate schema from.
     /// </summary>
-    [YamlMember(Alias = "schema_type")]
-    public string? SchemaType { get; init; }
+    public string? ResponseTypeName { get; init; }
 }

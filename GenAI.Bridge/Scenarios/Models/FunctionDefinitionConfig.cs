@@ -1,6 +1,4 @@
-using YamlDotNet.Serialization;
-
-namespace GenAI.Bridge.Contracts;
+namespace GenAI.Bridge.Scenarios.Models;
 
 /// <summary>
 /// Function definition for scenario stages.
@@ -25,6 +23,5 @@ public sealed record FunctionDefinitionConfig
     /// <summary>
     /// Gets or sets the C# type name for generating the parameters schema.
     /// </summary>
-    [YamlMember(Alias = "parameters_type")]
     public string? ParametersType { get; init; }
 }

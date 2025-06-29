@@ -8,5 +8,5 @@ namespace GenAI.Bridge.Contracts;
 /// </param>
 public sealed record CompletionPrompt(
     string? SystemMessage,
-    IReadOnlyList<PromptTurn> Turns,
+    PromptTurn UserPromptTurn,
     IReadOnlyDictionary<string, object>? Metadata = null);

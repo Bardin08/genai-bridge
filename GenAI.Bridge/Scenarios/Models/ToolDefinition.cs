@@ -1,4 +1,6 @@
-namespace GenAI.Bridge.Contracts;
+using GenAI.Bridge.Contracts;
+
+namespace GenAI.Bridge.Scenarios.Models;
 
 /// <summary>
 /// Tool definition for scenario stages.
