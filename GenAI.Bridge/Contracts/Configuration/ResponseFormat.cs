@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using GenAI.Bridge.Utils;
 
-namespace GenAI.Bridge.Contracts;
+namespace GenAI.Bridge.Contracts.Configuration;
 
 /// <summary>
 /// Defines the response format types available in OpenAI API.

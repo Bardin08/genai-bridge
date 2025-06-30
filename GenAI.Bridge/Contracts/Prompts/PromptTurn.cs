@@ -1,4 +1,6 @@
-namespace GenAI.Bridge.Contracts;
+using GenAI.Bridge.Contracts.Configuration;
+
+namespace GenAI.Bridge.Contracts.Prompts;
 
 /// <summary>
 /// Represents a single turn in a multi-turn prompt, aligned with OpenAI's message format.

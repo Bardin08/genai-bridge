@@ -1,9 +1,11 @@
 using System.Text.Json;
-using GenAI.Bridge.Contracts;
+using GenAI.Bridge.Contracts.Configuration;
+using GenAI.Bridge.Contracts.Prompts;
+using GenAI.Bridge.Contracts.Scenarios;
 using GenAI.Bridge.Scenarios.Models;
 using GenAI.Bridge.Utils;
 
-namespace GenAI.Bridge.Scenarios;
+namespace GenAI.Bridge.Scenarios.Builders;
 
 internal static class ScenarioBuilder
 {

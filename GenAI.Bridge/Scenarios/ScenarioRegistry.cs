@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using GenAI.Bridge.Abstractions;
 using GenAI.Bridge.Contracts;
+using GenAI.Bridge.Contracts.Prompts;
+using GenAI.Bridge.Scenarios.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace GenAI.Bridge.Scenarios;

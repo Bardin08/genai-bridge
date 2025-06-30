@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace GenAI.Bridge.Contracts;
+namespace GenAI.Bridge.Contracts.Configuration;
 
 /// <summary>
 /// Represents a function definition that can be called by the model.

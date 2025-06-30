@@ -1,4 +1,6 @@
-namespace GenAI.Bridge.Contracts;
+using GenAI.Bridge.Contracts.Scenarios;
+
+namespace GenAI.Bridge.Contracts.Prompts;
 
 /// <summary>
 /// Represents a scenario-driven prompt for multi-stage or guided workflows.

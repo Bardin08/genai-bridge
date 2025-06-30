@@ -1,7 +1,7 @@
-using GenAI.Bridge.Contracts;
+using GenAI.Bridge.Contracts.Prompts;
 using GenAI.Bridge.Scenarios.Models;
 
-namespace GenAI.Bridge.Abstractions;
+namespace GenAI.Bridge.Scenarios.Storage;
 
 /// <summary>
 /// Interface for remote scenario storage providers.

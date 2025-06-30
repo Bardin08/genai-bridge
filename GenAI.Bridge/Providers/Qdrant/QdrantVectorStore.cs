@@ -2,7 +2,7 @@ using GenAI.Bridge.Abstractions;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
 
-namespace GenAI.Bridge.Adapters;
+namespace GenAI.Bridge.Providers.Qdrant;
 
 public sealed class QdrantVectorStore(QdrantClient qClient, string collectionName) : IVectorStore
 {

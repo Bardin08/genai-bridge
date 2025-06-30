@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace GenAI.Bridge.Contracts;
+namespace GenAI.Bridge.Contracts.Configuration;
 
 /// <summary>
 /// Represents a tool that can be used by the model.

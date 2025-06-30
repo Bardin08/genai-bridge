@@ -1,4 +1,4 @@
-namespace GenAI.Bridge.Contracts;
+namespace GenAI.Bridge.Contracts.Results;
 
 /// <summary>
 /// Represents a streamed chunk of content (for streaming output APIs).

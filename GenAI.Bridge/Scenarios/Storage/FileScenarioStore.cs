@@ -1,7 +1,6 @@
-using System.Collections.Concurrent;
 using System.Text.Json;
-using GenAI.Bridge.Abstractions;
-using GenAI.Bridge.Contracts;
+using GenAI.Bridge.Contracts.Prompts;
+using GenAI.Bridge.Scenarios.Builders;
 using GenAI.Bridge.Scenarios.Models;
 using GenAI.Bridge.Scenarios.Validation;
 using Microsoft.Extensions.Logging;
@@ -9,7 +8,7 @@ using YamlDotNet.Core;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
-namespace GenAI.Bridge.Scenarios;
+namespace GenAI.Bridge.Scenarios.Storage;
 
 public class FileScenarioStore(
     string scenariosDirectory,

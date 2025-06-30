@@ -1,6 +1,4 @@
-using GenAI.Bridge.Contracts;
-
-namespace GenAI.Bridge.Scenarios.Models;
+namespace GenAI.Bridge.Contracts.Configuration;
 
 /// <summary>
 /// Configuration for response format in a scenario stage.

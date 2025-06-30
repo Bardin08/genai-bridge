@@ -1,6 +1,6 @@
-using GenAI.Bridge.Contracts;
+using GenAI.Bridge.Contracts.Prompts;
 
-namespace GenAI.Bridge.Abstractions;
+namespace GenAI.Bridge.Scenarios;
 
 /// <summary>
 /// Registry for reusable, named AI scenarios (multi-stage orchestration).

@@ -1,6 +1,6 @@
 using GenAI.Bridge.Scenarios.Models;
 
-namespace GenAI.Bridge.Contracts;
+namespace GenAI.Bridge.Contracts.Configuration;
 
 /// <summary>
 /// Functions configuration for a scenario stage.

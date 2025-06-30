@@ -1,4 +1,6 @@
-namespace GenAI.Bridge.Contracts;
+using GenAI.Bridge.Contracts.Prompts;
+
+namespace GenAI.Bridge.Contracts.Scenarios;
 
 /// <summary>
 /// Represents a logical stage within a scenario with its own sequence of prompt turns.
