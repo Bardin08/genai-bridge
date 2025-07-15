@@ -1,4 +1,5 @@
 using System.Text.Json;
+using GenAI.Bridge.Context;
 using GenAI.Bridge.Contracts.Results;
 using GenAI.Bridge.Providers.InMemory;
 using GenAI.Bridge.Providers.OpenAI;
@@ -46,12 +47,12 @@ public sealed class ContextStoreMiddlewareV2(InMemoryContextStore store) : IStag
 
         if (string.IsNullOrEmpty(result.SystemPrompt))
         {
-            var systemPromptKey = MetadataKeysFactory.InputKey(stageKey, "system_prompt");
+            var systemPromptKey = ContextKeysBuilder.InputKey(stageKey, "system_prompt");
             tasks.Add(store.SaveItemAsync(result.SessionId, systemPromptKey, result.SystemPrompt,
                 ct: CancellationToken.None));
         }
 
-        var userPromptKey = MetadataKeysFactory.InputKey(stageKey, "user_prompt");
+        var userPromptKey = ContextKeysBuilder.InputKey(stageKey, "user_prompt");
         tasks.Add(store.SaveItemAsync(result.SessionId, userPromptKey, result.UserPrompt.Content,
             ct: CancellationToken.None));
 
@@ -66,17 +67,17 @@ public sealed class ContextStoreMiddlewareV2(InMemoryContextStore store) : IStag
             return tasks;
 
         var model = result.Metadata["model"];
-        var modelKey = MetadataKeysFactory.MetadataKey(stageKey, "model");
+        var modelKey = ContextKeysBuilder.MetadataKey(stageKey, "model");
         tasks.Add(store.SaveItemAsync(result.SessionId, modelKey, model, ct: CancellationToken.None));
 
         if (model is "unknown")
         {
-            var errorLogKey = MetadataKeysFactory.OutputLogKey(stageKey, "error");
+            var errorLogKey = ContextKeysBuilder.OutputLogKey(stageKey, "error");
             tasks.Add(store.SaveItemAsync(result.SessionId, errorLogKey, model, ct: CancellationToken.None));
         }
 
         tasks.AddRange(result.Metadata
-            .Select(param => new { param, paramKey = MetadataKeysFactory.InputParamsKey(stageKey, param.Key) })
+            .Select(param => new { param, paramKey = ContextKeysBuilder.InputParamsKey(stageKey, param.Key) })
             .Select(t =>
                 store.SaveItemAsync(result.SessionId, t.paramKey, t.param.Value, ct: CancellationToken.None)));
 
@@ -89,12 +90,12 @@ public sealed class ContextStoreMiddlewareV2(InMemoryContextStore store) : IStag
 
         // Save execution result content
         var resultContent = result.Content;
-        var resultOutputKey = MetadataKeysFactory.OutputKey(stageKey);
+        var resultOutputKey = ContextKeysBuilder.OutputKey(stageKey);
         tasks.Add(store.SaveItemAsync(result.SessionId, resultOutputKey, resultContent, ct: CancellationToken.None));
 
         // Save execution ID
         var execId = result.Metadata?[MetadataKeys.Id].ToString() ?? stageKey;
-        var execResultKey = MetadataKeysFactory.OutputParamKey(stageKey, "execution_id");
+        var execResultKey = ContextKeysBuilder.OutputParamKey(stageKey, "execution_id");
         tasks.Add(store.SaveItemAsync(result.SessionId, execResultKey, execId, ct: CancellationToken.None));
 
         return tasks;
@@ -122,13 +123,13 @@ public sealed class ContextStoreMiddlewareV2(InMemoryContextStore store) : IStag
         var tasks = new List<Task>();
 
         var outputModel = result.Metadata[MetadataKeys.Model].ToString() ?? "unknown";
-        var modelMetadataKey = MetadataKeysFactory.MetadataKey(stageKey, "output_model");
+        var modelMetadataKey = ContextKeysBuilder.MetadataKey(stageKey, "output_model");
         tasks.Add(store.SaveItemAsync(result.SessionId, modelMetadataKey, outputModel, ct: CancellationToken.None));
 
         if (result.Metadata[MetadataKeys.FinishReason] is not string finishReasonStr)
             return tasks;
 
-        var finishReasonKey = MetadataKeysFactory.MetadataKey(stageKey, "finish_reason");
+        var finishReasonKey = ContextKeysBuilder.MetadataKey(stageKey, "finish_reason");
         tasks.Add(store.SaveItemAsync(result.SessionId, finishReasonKey, finishReasonStr,
             ct: CancellationToken.None));
 
@@ -147,7 +148,7 @@ public sealed class ContextStoreMiddlewareV2(InMemoryContextStore store) : IStag
             .Select(x => new
             {
                 toolCall = x,
-                toolCallKey = MetadataKeysFactory.ToolCallKey(stageKey, x.FunctionName, x.Id),
+                toolCallKey = ContextKeysBuilder.ToolCallKey(stageKey, x.FunctionName, x.Id),
                 funcJsonStr = JsonSerializer.Serialize(x, Constants.Json.DefaultSettings)
             })
             .Select(x =>
@@ -176,7 +177,7 @@ public sealed class ContextStoreMiddlewareV2(InMemoryContextStore store) : IStag
             if (result.Metadata[metadataKey] is not int tokenCount)
                 continue;
 
-            var tokenKey = MetadataKeysFactory.MetadataKey(stageKey, keyName);
+            var tokenKey = ContextKeysBuilder.MetadataKey(stageKey, keyName);
             tasks.Add(store.SaveItemAsync(result.SessionId, tokenKey, tokenCount, ct: CancellationToken.None));
         }
 
@@ -184,34 +185,4 @@ public sealed class ContextStoreMiddlewareV2(InMemoryContextStore store) : IStag
     }
 
     private static string GetStageKey(int stageId, int turnIndex) => $"{stageId}-{turnIndex + 1}";
-}
-
-internal static class MetadataKeysFactory
-{
-    public static string InputKey(
-        string stageId,
-        string parameterName) => $"stage:{stageId}:input:{parameterName}";
-
-    public static string InputParamsKey(
-        string stageId,
-        string parameterName) => $"stage:{stageId}:input:params:{parameterName}";
-
-    public static string ToolCallKey(
-        string stageId,
-        string toolName,
-        string callId) => $"stage:{stageId}:tool:{toolName}:{callId}";
-
-    public static string MetadataKey(
-        string stageId,
-        string key) => $"stage:{stageId}:metadata:{key}";
-
-    public static string OutputKey(string stageId) => $"stage:{stageId}:output";
-
-    public static string OutputParamKey(
-        string stageId,
-        string parameterName) => $"stage:{stageId}:output:params:{parameterName}";
-
-    public static string OutputLogKey(
-        string stageId,
-        string logType) => $"stage:{stageId}:output:{logType}";
 }
