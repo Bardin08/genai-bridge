@@ -7,6 +7,7 @@ using GenAI.Bridge.Contracts.Configuration;
 using GenAI.Bridge.Contracts.Prompts;
 using GenAI.Bridge.Contracts.Results;
 using GenAI.Bridge.Tooling;
+using GenAI.Bridge.Utils.Extensions;
 using OpenAI;
 using OpenAI.Chat;
 
@@ -60,18 +61,23 @@ public sealed class OpenAiLlmAdapter : ILlmAdapter
     {
         var messages = BuildInitialMessages(prompt);
         var options = BuildOptions(prompt);
-        return await RunConversationAsync(model, messages, options, ct);
+        var response = await RunConversationAsync(model, messages, options, ct);
+
+        var promptMetadata = prompt.UserPromptTurn.Parameters?
+            .ToDictionary(k => k.Key, v => v.Value, StringComparer.OrdinalIgnoreCase) ?? [];
+
+        var fullMetadata = promptMetadata.Merge(response.metadata);
+        return new CompletionResult(prompt.SessionId, response.response, prompt.SystemMessage, prompt.UserPromptTurn,
+            fullMetadata.AsReadOnly());
     }
 
     private static Dictionary<string, ChatClient> CreateChatClients(OpenAiLlmAdapterConfig cfg)
     {
-        var dict = new Dictionary<string, ChatClient>(StringComparer.OrdinalIgnoreCase);
-        foreach (var m in cfg.SupportedModels)
+        var clients = new Dictionary<string, ChatClient>(StringComparer.OrdinalIgnoreCase);
+        foreach (var model in cfg.SupportedModels.Where(model => !clients.ContainsKey(model)))
         {
-            if (dict.ContainsKey(m)) continue;
-
-            dict[m] = new ChatClient(
-                m,
+            clients[model] = new ChatClient(
+                model,
                 new ApiKeyCredential(cfg.ApiKey),
                 new OpenAIClientOptions
                 {
@@ -82,7 +88,7 @@ public sealed class OpenAiLlmAdapter : ILlmAdapter
                 });
         }
 
-        return dict;
+        return clients;
     }
 
     private static List<ChatMessage> BuildInitialMessages(CompletionPrompt prompt)
@@ -91,7 +97,7 @@ public sealed class OpenAiLlmAdapter : ILlmAdapter
         if (!string.IsNullOrWhiteSpace(prompt.SystemMessage))
             list.Add(ChatMessage.CreateSystemMessage(prompt.SystemMessage));
 
-        if (!prompt.UserPromptTurn.Role.Equals("user", StringComparison.OrdinalIgnoreCase))
+        if (!prompt.UserPromptTurn.Role.Equals(Constants.Roles.User, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException($"Unsupported role '{prompt.UserPromptTurn.Role}'. Expected 'user'.");
 
         list.Add(ChatMessage.CreateUserMessage(prompt.UserPromptTurn.Content));
@@ -103,9 +109,9 @@ public sealed class OpenAiLlmAdapter : ILlmAdapter
         var p = prompt.UserPromptTurn;
         var o = new ChatCompletionOptions
         {
-            MaxOutputTokenCount = p.MaxTokens ?? 4096,
-            Temperature = p.Temperature ?? 1.0f,
-            TopP = p.TopP ?? 1.0f
+            MaxOutputTokenCount = p.MaxTokens.GetValueOrDefault(4096),
+            Temperature = p.Temperature.GetValueOrDefault(1.0f),
+            TopP = p.TopP.GetValueOrDefault(1.0f)
         };
 
         // TODO: OpenAI deprecated function calls in favor of tools.
@@ -146,7 +152,7 @@ public sealed class OpenAiLlmAdapter : ILlmAdapter
             ResponseFormatType.JsonObject => ChatResponseFormat.CreateJsonObjectFormat(),
             ResponseFormatType.JsonSchema when !string.IsNullOrWhiteSpace(p.ResponseFormat.Schema)
                 => ChatResponseFormat.CreateJsonSchemaFormat(
-                    jsonSchemaFormatName: p.Name + "_response_schema",
+                    jsonSchemaFormatName: p.Name,
                     jsonSchema: BinaryData.FromString(p.ResponseFormat.Schema),
                     jsonSchemaIsStrict: true),
             _ => throw new ArgumentException("Unsupported or missing response format.")
@@ -154,7 +160,8 @@ public sealed class OpenAiLlmAdapter : ILlmAdapter
         return o;
     }
 
-    private async Task<CompletionResult> RunConversationAsync(string model,
+    private async Task<(string response, Dictionary<string, object> metadata)> RunConversationAsync(
+        string model,
         List<ChatMessage> messages,
         ChatCompletionOptions options,
         CancellationToken ct)
@@ -180,28 +187,45 @@ public sealed class OpenAiLlmAdapter : ILlmAdapter
                 };
 
                 if (resp.Value.Usage is not { } u)
-                    return new CompletionResult(text ?? string.Empty, meta);
+                    return (text ?? string.Empty, meta);
 
                 meta[MetadataKeys.InputTokens] = u.InputTokenCount;
                 meta[MetadataKeys.OutputTokens] = u.OutputTokenCount;
                 meta[MetadataKeys.TotalTokens] = u.TotalTokenCount;
-                return new CompletionResult(text ?? string.Empty, meta);
+                return (text ?? string.Empty, meta);
             }
 
             // execute tool calls
-            var toolMsgs = await Task.WhenAll(calls.Select(async tc =>
+            var toolMsgs = await Task.WhenAll(calls.Select(async toolCall =>
             {
-                var args = JsonSerializer.Deserialize<JsonElement>(tc.FunctionArguments, _jsonOptions);
-                if (!_registry.TryGet(tc.FunctionName, out var impl))
-                    throw new InvalidOperationException($"Unknown function '{tc.FunctionName}'.");
+                var args = JsonSerializer.Deserialize<JsonElement>(toolCall.FunctionArguments, _jsonOptions);
+                if (!_registry.TryGet(toolCall.FunctionName, out var toolDelegate))
+                    throw new InvalidOperationException($"Unknown function '{toolCall.FunctionName}'.");
 
-                var resultJson = await Task.Run(() => impl(args), ct);
+                var resultJson = await Task.Run(() => toolDelegate(args), ct);
 
-                auditList.Add(new { tc.Id, tc.FunctionName, Arguments = args, Result = resultJson });
-                return ChatMessage.CreateToolMessage(tc.Id, resultJson);
+                auditList.Add(new ToolCallAudit
+                {
+                    Id = toolCall.Id,
+                    FunctionName = toolCall.FunctionName,
+                    Arguments = args,
+                    Result = resultJson
+                });
+                return ChatMessage.CreateToolMessage(toolCall.Id, resultJson);
             }));
 
             messages.AddRange(toolMsgs);
         }
     }
+}
+
+public record ToolCallAudit
+{
+    public required string Id { get; init; }
+    public required string FunctionName { get; init; }
+    public JsonElement Arguments { get; init; }
+    public required object Result { get; init; }
+
+    public override string ToString()
+        => $"ToolCallAudit(Id: {Id}, FunctionName: {FunctionName}, Arguments: {Arguments}, Result: {Result})";
 }
