@@ -9,12 +9,14 @@ namespace GenAI.Bridge.Utils;
 /// Complete JSON Schema generator for OpenAI Structured Outputs
 /// Supports all OpenAI requirements including nested objects, definitions, and validation
 /// </summary>
-public static class OpenAiJsonSchemaGenerator
+public static class OpenAiJsonSchemaUtils
 {
     private static readonly Dictionary<Type, string> TypeDefinitions = new();
     private static readonly Dictionary<string, object> Definitions = new();
     private static int _nestingLevel;
-    private static readonly HashSet<Type> ProcessedTypes = [];
+    private static readonly HashSet<Type> DiscoveredTypes = [];
+    private static readonly HashSet<Type> ProcessingTypes = [];
+    private static bool _isInDiscoveryPhase = true;
 
     private static readonly JsonSerializerOptions JsonSerializerOptions = new()
     {
@@ -47,20 +49,24 @@ public static class OpenAiJsonSchemaGenerator
         // Reset state for new schema generation
         ResetState();
 
+        // Phase 1: Discover all types that need definitions
+        _isInDiscoveryPhase = true;
+        DiscoverTypes(type, isRoot: true);
+
+        // Phase 2: Create all type definitions
+        _isInDiscoveryPhase = false;
+        CreateAllDefinitions();
+
+        // Phase 3: Generate the root schema
         var rootSchema = CreateSchemaObject(type, isRoot: true);
 
-        // Build the complete schema structure
-        var completeSchema = new Dictionary<string, object>
+        // Add definitions to root schema
+        if (Definitions.Count != 0)
         {
-            ["name"] = schemaName,
-            ["strict"] = true,
-            ["schema"] = rootSchema
-        };
+            rootSchema["$defs"] = new Dictionary<string, object>(Definitions);
+        }
 
-        if (!string.IsNullOrEmpty(description))
-            completeSchema["description"] = description;
-
-        return JsonSerializer.Serialize(completeSchema, JsonSerializerOptions);
+        return JsonSerializer.Serialize(rootSchema, JsonSerializerOptions);
     }
 
     private static void ResetState()
@@ -68,7 +74,73 @@ public static class OpenAiJsonSchemaGenerator
         TypeDefinitions.Clear();
         Definitions.Clear();
         _nestingLevel = 0;
-        ProcessedTypes.Clear();
+        DiscoveredTypes.Clear();
+        ProcessingTypes.Clear();
+        _isInDiscoveryPhase = true;
+    }
+
+    private static void DiscoverTypes(Type type, bool isRoot = false)
+    {
+        if (IsNullableType(type))
+        {
+            var underlyingType = Nullable.GetUnderlyingType(type);
+            DiscoverTypes(underlyingType!, false);
+            return;
+        }
+
+        if (IsSimpleType(type))
+            return;
+
+        if (type.IsArray || IsGenericList(type))
+        {
+            var elementType = type.IsArray ? type.GetElementType()! : type.GetGenericArguments()[0];
+            DiscoverTypes(elementType, false);
+            return;
+        }
+
+        // For complex object types
+        if (!isRoot && !DiscoveredTypes.Contains(type) && _isInDiscoveryPhase)
+        {
+            DiscoveredTypes.Add(type);
+            
+            // Assign a definition name
+            if (!TypeDefinitions.ContainsKey(type))
+            {
+                TypeDefinitions[type] = GenerateDefinitionName(type);
+            }
+        }
+
+        // Avoid infinite recursion
+        if (ProcessingTypes.Contains(type))
+            return;
+
+        ProcessingTypes.Add(type);
+
+        // Discover types from properties
+        foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        {
+            if (prop is { CanRead: true, CanWrite: true })
+            {
+                DiscoverTypes(prop.PropertyType, false);
+            }
+        }
+
+        ProcessingTypes.Remove(type);
+    }
+
+    private static void CreateAllDefinitions()
+    {
+        // Create a copy of the discovered types to avoid modification during enumeration
+        var typesToProcess = new List<Type>(DiscoveredTypes);
+        
+        foreach (var type in typesToProcess)
+        {
+            if (!Definitions.ContainsKey(TypeDefinitions[type]))
+            {
+                var definition = CreateObjectSchemaInternal(type);
+                Definitions[TypeDefinitions[type]] = definition;
+            }
+        }
     }
 
     private static Dictionary<string, object> CreateSchemaObject(Type type, bool isRoot = false)
@@ -193,42 +265,17 @@ public static class OpenAiJsonSchemaGenerator
             throw new InvalidOperationException($"Maximum nesting depth of 5 exceeded for type {type.Name}");
         }
 
-        if (!isRoot && !IsSimpleType(type) && !ProcessedTypes.Contains(type))
+        // For non-root complex types, return a $ref
+        if (!isRoot && TypeDefinitions.TryGetValue(type, out var defName))
         {
-            CreateTypeDefinition(type);
-        }
-
-        if (TypeDefinitions.TryGetValue(type, out var typeDef))
-        {
-            // Return ONLY the $ref - no additional properties allowed
             return new Dictionary<string, object>
             {
-                ["$ref"] = $"#/$defs/{typeDef}"
+                ["$ref"] = $"#/$defs/{defName}"
             };
         }
 
-        var schema = CreateObjectSchemaInternal(type);
-
-        // Add definitions to root schema
-        if (isRoot && Definitions.Count != 0)
-        {
-            schema["$defs"] = new Dictionary<string, object>(Definitions);
-        }
-
-        return schema;
-    }
-
-    private static void CreateTypeDefinition(Type type)
-    {
-        var defName = GenerateDefinitionName(type);
-        TypeDefinitions[type] = defName;
-        ProcessedTypes.Add(type);
-
-        _nestingLevel++;
-        var definition = CreateObjectSchemaInternal(type);
-        _nestingLevel--;
-
-        Definitions[defName] = definition;
+        // For root types, create the schema inline
+        return CreateObjectSchemaInternal(type);
     }
 
     private static Dictionary<string, object> CreateObjectSchemaInternal(Type type)
@@ -351,7 +398,6 @@ public static class OpenAiJsonSchemaGenerator
             schema["pattern"] = regularExpression.Pattern;
     }
 
-
     private static bool IsSimpleType(Type type)
     {
         return type.IsPrimitive ||
@@ -404,7 +450,7 @@ public static class OpenAiJsonSchemaGenerator
 
         var counter = 1;
         var finalName = baseName;
-        while (Definitions.ContainsKey(finalName))
+        while (TypeDefinitions.Values.Contains(finalName))
         {
             finalName = $"{baseName}_{counter++}";
         }
