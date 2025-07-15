@@ -41,10 +41,7 @@ public sealed record ScenarioPrompt(
     /// <summary>
     /// Finds a stage by name.
     /// </summary>
-    /// <param name="stageName">The name of the stage to find.</param>
+    /// <param name="stageId">The name of the stage to find.</param>
     /// <returns>The stage if found, null otherwise.</returns>
-    public ScenarioStage? FindStage(string stageName)
-    {
-        return Stages.FirstOrDefault(s => string.Equals(s.Name, stageName, StringComparison.OrdinalIgnoreCase));
-    }
+    public ScenarioStage? FindStage(int stageId) => Stages.FirstOrDefault(s => s.Id == stageId);
 }

@@ -73,5 +73,5 @@ public sealed record ResponseFormat
     /// <typeparam name="T">The C# type to generate schema from.</typeparam>
     /// <returns>A response format configured for JSON output with schema validation.</returns>
     public static ResponseFormat JsonFromType<T>() =>
-        JsonWithSchema(OpenAiJsonSchemaGenerator.GenerateSchema<T>("response_format_schema_" + typeof(T).Name));
+        JsonWithSchema(OpenAiJsonSchemaUtils.GenerateSchema<T>("response_format_schema_" + typeof(T).Name));
 }

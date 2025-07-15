@@ -1,4 +1,5 @@
 using GenAI.Bridge.Contracts.Configuration;
+using GenAI.Bridge.Utils.Extensions;
 
 namespace GenAI.Bridge.Contracts.Prompts;
 
@@ -6,26 +7,31 @@ namespace GenAI.Bridge.Contracts.Prompts;
 /// Represents a single turn in a multi-turn prompt, aligned with OpenAI's message format.
 /// </summary>
 public sealed record PromptTurn(
-    string Role, // e.g., "user", "assistant", "system", "function"
+    string Role,
     string Content,
-    string? Name = null, // For function calls and tool usage
+    string? Name = null,
     IReadOnlyDictionary<string, object>? Parameters = null)
 {
     /// <summary>
     /// Temperature setting for this turn (0.0 to 1.0)
     /// </summary>
-    public float? Temperature => Parameters?.TryGetValue("temperature", out var temp) == true ? (float?)temp : null;
+    public float? Temperature
+        => Parameters?.TryGetValue("temperature", out var topP) == true ? topP.GetParamAs<float>() : null;
 
     /// <summary>
     /// TopP setting for this turn (0.0 to 1.0)
     /// </summary>
-    public float? TopP => Parameters?.TryGetValue("top_p", out var topP) == true ? (float?)topP : null;
+    public float? TopP
+        => Parameters?.TryGetValue("top_p", out var topP) == true ? topP.GetParamAs<float>() : null;
 
     /// <summary>
     /// Maximum tokens to generate for this turn
     /// </summary>
-    public int? MaxTokens => Parameters?.TryGetValue("max_tokens", out var maxTokens) == true ? (int?)maxTokens : null;
+    public int? MaxTokens
+        => Parameters?.TryGetValue("max_tokens", out var maxTokens) == true ? maxTokens.GetParamAs<int>() : null;
 
+    public bool IsUserTurn => Role.Equals(Constants.Roles.User, StringComparison.OrdinalIgnoreCase);
+    
     /// <summary>
     /// Function calling configuration for this turn
     /// </summary>
@@ -51,26 +57,19 @@ public sealed record PromptTurn(
     /// </summary>
     public static PromptTurn User(string content, string name,
         IReadOnlyDictionary<string, object>? parameters = null) =>
-        new(Role: "user", Content: content, Name: name, Parameters: parameters);
+        new(Role: Constants.Roles.User, Content: content, Name: name, Parameters: parameters);
 
     /// <summary>
     /// Creates a system prompt turn
     /// </summary>
     public static PromptTurn System(string content, IReadOnlyDictionary<string, object>? parameters = null) =>
-        new(Role: "system", Content: content, Parameters: parameters);
+        new(Role: Constants.Roles.System, Content: content, Parameters: parameters);
 
     /// <summary>
     /// Creates an assistant prompt turn
     /// </summary>
     public static PromptTurn Assistant(string content, IReadOnlyDictionary<string, object>? parameters = null) =>
-        new(Role: "assistant", Content: content, Parameters: parameters);
-
-    /// <summary>
-    /// Creates a function prompt turn
-    /// </summary>
-    public static PromptTurn Function(string name, string content,
-        IReadOnlyDictionary<string, object>? parameters = null) =>
-        new(Role: "function", Content: content, Name: name, Parameters: parameters);
+        new(Role: Constants.Roles.Assistant, Content: content, Parameters: parameters);
 
     /// <summary>
     /// Creates a user prompt turn with JSON response format
@@ -84,7 +83,7 @@ public sealed record PromptTurn(
 
         allParams["response_format"] = ResponseFormat.Json();
 
-        return new PromptTurn(Role: "user", Content: content, Parameters: allParams);
+        return new PromptTurn(Role: Constants.Roles.User, Content: content, Parameters: allParams);
     }
 
     /// <summary>
@@ -99,6 +98,6 @@ public sealed record PromptTurn(
 
         allParams["response_format"] = ResponseFormat.JsonWithSchema(schema);
 
-        return new PromptTurn(Role: "user", Content: content, Parameters: allParams);
+        return new PromptTurn(Role: Constants.Roles.User, Content: content, Parameters: allParams);
     }
 }

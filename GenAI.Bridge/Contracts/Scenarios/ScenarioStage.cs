@@ -1,4 +1,5 @@
 using GenAI.Bridge.Contracts.Prompts;
+using GenAI.Bridge.Utils.Extensions;
 
 namespace GenAI.Bridge.Contracts.Scenarios;
 
@@ -6,33 +7,41 @@ namespace GenAI.Bridge.Contracts.Scenarios;
 /// Represents a logical stage within a scenario with its own sequence of prompt turns.
 /// </summary>
 public sealed record ScenarioStage(
+    int Id,
     string Name,
     IReadOnlyList<PromptTurn> Turns,
     string? Model = null,
     IReadOnlyDictionary<string, object>? Parameters = null)
 {
     /// <summary>
+    /// Get all user turns in this stage.
+    /// </summary>
+    /// <returns>A list of user turns in this stage.</returns>
+    public List<PromptTurn> GetUserTurns()
+        => Turns.Where(t => t.Role is Constants.Roles.User).ToList();
+
+    /// <summary>
+    /// Get the system prompt for this stage.
+    /// </summary>
+    /// <returns>A system prompt for this stage.</returns>
+    public PromptTurn? GetSystemPrompt()
+        => Turns.SingleOrDefault(t => t.Role is Constants.Roles.System);
+
+    /// <summary>
     /// Builds multiple CompletionPrompts from this scenario stage, one for each user turn.
     /// </summary>
-    /// <param name="context">The context dictionary for parameter interpolation.</param>
+    /// <param name="sessionId"></param>
+    /// <param name="execMetadata">The context dictionary for parameter interpolation.</param>
     /// <returns>A list of CompletionPrompts ready to be sent to an LLM.</returns>
-    public IReadOnlyList<CompletionPrompt> ToCompletionPrompts(IDictionary<string, object> context)
+    public IReadOnlyList<CompletionPrompt> ToCompletionPrompts(string sessionId,
+        IDictionary<string, object> execMetadata)
     {
-        // Extract system message (only one allowed)
-        var systemTurn = Turns.FirstOrDefault(t => t.Role == "system");
-        var systemMessage = systemTurn?.Content;
+        var systemMessage = GetSystemPrompt()?.Content;
 
-        // Get all user turns
-        var userTurns = Turns
-            .Where(t => t.Role == "user")
-            .ToList();
-
+        var userTurns = GetUserTurns();
         if (userTurns.Count == 0)
-        {
             throw new InvalidOperationException($"Stage '{Name}' does not contain any user turns");
-        }
 
-        // Create multiple completion prompts, one for each user turn
         var prompts = new List<CompletionPrompt>();
         
         foreach (var userTurn in userTurns)
@@ -42,16 +51,16 @@ public sealed record ScenarioStage(
                 ? new Dictionary<string, object>(Parameters) 
                 : new Dictionary<string, object>();
 
-            // Create relevant history for this user turn
-            // (all previous turns before this user turn)
+            metadata.Merge(execMetadata);
+
+            // Create relevant history for this user turn (all previous turns before this user turn)
             var turnsBeforeThis = Turns
                 .TakeWhile(t => t != userTurn)
-                .Count(t => t.Role != "system");
+                .Count(t => t.Role != Constants.Roles.System);
 
             metadata["history_depth"] = turnsBeforeThis;
             
-            var prompt = new CompletionPrompt(systemMessage, userTurn, metadata);
-
+            var prompt = new CompletionPrompt(sessionId, systemMessage, userTurn, metadata);
             prompts.Add(prompt);
         }
 
