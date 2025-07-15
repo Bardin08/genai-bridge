@@ -6,7 +6,7 @@ public sealed class LlmRequestMiddleware(ILlmAdapter llmAdapter) : IStageMiddlew
 {
     public async Task InvokeAsync(StageExecutionContext ctx, Func<Task> next, CancellationToken ct)
     {
-        var completionPrompts = ctx.Stage.ToCompletionPrompts(ctx.Metadata);
+        var completionPrompts = ctx.Stage.ToCompletionPrompts(ctx.SessionId, ctx.Metadata);
 
         foreach (var completionPrompt in completionPrompts)
         {

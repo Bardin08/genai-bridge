@@ -1,4 +1,3 @@
-using GenAI.Bridge.Contracts;
 using GenAI.Bridge.Contracts.Configuration;
 
 namespace GenAI.Bridge.Scenarios.Models;

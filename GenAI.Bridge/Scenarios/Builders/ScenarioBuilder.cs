@@ -4,15 +4,15 @@ using GenAI.Bridge.Contracts.Prompts;
 using GenAI.Bridge.Contracts.Scenarios;
 using GenAI.Bridge.Scenarios.Models;
 using GenAI.Bridge.Utils;
+using GenAI.Bridge.Utils.Extensions;
 
 namespace GenAI.Bridge.Scenarios.Builders;
 
 internal static class ScenarioBuilder
 {
-    
     public static ScenarioPrompt ConvertToScenarioPrompt(ScenarioDefinition definition)
     {
-        var stages = definition.Stages.Select(ScenarioBuilder.ConstructStage).ToList();
+        var stages = definition.Stages.Select(s => ConstructStage(definition, s)).ToList();
 
         return new ScenarioPrompt(
             Name: definition.Name,
@@ -44,13 +44,13 @@ internal static class ScenarioBuilder
         var parameters = new Dictionary<string, object>(promptDef.Parameters);
 
         if (!promptDef.Temperature.HasValue)
-            parameters["temperature"] = stageDef.Temperature ?? 1.0f;
+            parameters["temperature"] = stageDef.Parameters.GetValueOrDefault("temperature", 1.0f).GetParamAs<float>();
 
         if (!promptDef.TopP.HasValue)
-            parameters["top_p"] = stageDef.TopP ?? 1.0f;
+            parameters["top_p"] = stageDef.Parameters.GetValueOrDefault("top_p", 1.0f).GetParamAs<float>();
 
         if (!promptDef.MaxTokens.HasValue)
-            parameters["max_tokens"] = stageDef.MaxTokens ?? 1000;
+            parameters["max_tokens"] = stageDef.Parameters.GetValueOrDefault("max_tokens", 1000).GetParamAs<int>();
 
         var responseFormat = GetResponseFormat(promptDef.ResponseFormatConfig);
         parameters["response_format"] = responseFormat;
@@ -74,7 +74,7 @@ internal static class ScenarioBuilder
 
         if (!string.IsNullOrWhiteSpace(responseFormatConfig.ResponseTypeName))
         {
-            var schema = Utils.TypeResolver.GenerateSchemaFromTypeName(responseFormatConfig.ResponseTypeName);
+            var schema = TypeResolver.GenerateSchemaFromTypeName(responseFormatConfig.ResponseTypeName);
             responseFormat = schema != null
                 ? ResponseFormat.JsonWithSchema(schema)
                 : ResponseFormat.Json();
@@ -97,7 +97,7 @@ internal static class ScenarioBuilder
 
     #region Scenario Stage Construction
 
-    public static ScenarioStage ConstructStage(ScenarioStageDefinition stageDef)
+    private static ScenarioStage ConstructStage(ScenarioDefinition definition, ScenarioStageDefinition stageDef)
     {
         var turns = new List<PromptTurn>();
 
@@ -111,15 +111,16 @@ internal static class ScenarioBuilder
         var stageParameters = ConstructStageParameters(stageDef);
 
         var userPrompts = stageDef.UserPrompts
-            .Select(promptDef => ScenarioBuilder.ConstructUserPrompt(stageDef, promptDef))
+            .Select(promptDef => ConstructUserPrompt(stageDef, promptDef))
             .ToList();
 
         turns.AddRange(userPrompts);
 
         var stage = new ScenarioStage(
+            Id: stageDef.Id,
             Name: stageDef.Name,
             Turns: turns,
-            Model: stageDef.Model,
+            Model: stageDef.Model ?? definition.Metadata["model"],
             Parameters: stageParameters
         );
         return stage;
@@ -128,12 +129,6 @@ internal static class ScenarioBuilder
     private static Dictionary<string, object> ConstructStageParameters(ScenarioStageDefinition defStage)
     {
         var stageParameters = new Dictionary<string, object>(defStage.Parameters);
-
-        if (defStage.Temperature.HasValue) stageParameters["temperature"] = defStage.Temperature.Value;
-
-        if (defStage.TopP.HasValue) stageParameters["top_p"] = defStage.TopP.Value;
-
-        if (defStage.MaxTokens.HasValue) stageParameters["max_tokens"] = defStage.MaxTokens.Value;
 
         var stageFunctions = ConstructStageFunctions(defStage);
         if (stageFunctions != null) stageParameters["functions"] = stageFunctions;
@@ -224,7 +219,7 @@ internal static class ScenarioBuilder
         }
 
         // _logger?.LogWarning("Failed to generate function parameters schema from type: {Type}",
-            // funcDef.ParametersType);
+        // funcDef.ParametersType);
 
         return funcDef.Parameters;
     }

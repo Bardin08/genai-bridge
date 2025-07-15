@@ -1,4 +1,3 @@
-using GenAI.Bridge.Contracts;
 using GenAI.Bridge.Contracts.Configuration;
 
 namespace GenAI.Bridge.Scenarios.Models;
@@ -9,9 +8,19 @@ namespace GenAI.Bridge.Scenarios.Models;
 public sealed record ScenarioStageDefinition
 {
     /// <summary>
+    /// The ID of the stage. Used to refer to stage at the definition
+    /// </summary>
+    public int Id { get; set; }
+
+    /// <summary>
     /// The name of this stage.
     /// </summary>
     public string Name { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The description of this stage.
+    /// </summary>
+    public string? Description { get; init; }
 
     /// <summary>
     /// The system prompt for this stage.
@@ -23,21 +32,6 @@ public sealed record ScenarioStageDefinition
     /// </summary>
     public List<UserPromptDefinition> UserPrompts { get; init; } = [];
 
-    /// <summary>
-    /// Optional temperature setting for this stage.
-    /// </summary>
-    public float? Temperature { get; init; }
-
-    /// <summary>
-    /// Optional top-p setting for this stage.
-    /// </summary>
-    public float? TopP { get; init; }
-
-    /// <summary>
-    /// Maximum tokens to generate for this stage.
-    /// </summary>
-    public int? MaxTokens { get; init; }
-    
     /// <summary>
     /// Model to use for this stage. Default is null, which means the model will be resolved by model router.
     /// </summary>
