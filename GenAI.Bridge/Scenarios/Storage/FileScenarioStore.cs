@@ -3,10 +3,9 @@ using GenAI.Bridge.Contracts.Prompts;
 using GenAI.Bridge.Scenarios.Builders;
 using GenAI.Bridge.Scenarios.Models;
 using GenAI.Bridge.Scenarios.Validation;
+using GenAI.Bridge.Utils;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Core;
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
 
 namespace GenAI.Bridge.Scenarios.Storage;
 
@@ -20,14 +19,6 @@ public class FileScenarioStore(
         scenariosDirectory ?? throw new ArgumentNullException(nameof(scenariosDirectory));
 
     private readonly IScenarioValidator _validator = validator ?? throw new ArgumentNullException(nameof(validator));
-
-    private readonly IDeserializer _yamlDeserializer = new DeserializerBuilder()
-        .WithNamingConvention(CamelCaseNamingConvention.Instance)
-        .Build();
-
-    private readonly ISerializer _yamlSerializer = new SerializerBuilder()
-        .WithNamingConvention(CamelCaseNamingConvention.Instance)
-        .Build();
 
     private readonly ILogger<FileScenarioStore> _logger = logger;
 
@@ -95,7 +86,7 @@ public class FileScenarioStore(
         var fileName = Path.Combine(_scenariosDirectory, $"{scenario.Name}.yaml");
         try
         {
-            var yamlContent = _yamlSerializer.Serialize(scenario);
+            var yamlContent = scenario.SerializeToYaml();
             File.WriteAllText(fileName, yamlContent);
             _logger.LogInformation("Stored scenario: {Name} to {File}", scenario.Name, fileName);
             return Task.FromResult(true);
@@ -181,7 +172,7 @@ public class FileScenarioStore(
 
         var scenarioDefinition = fileExtension == ".json"
             ? JsonSerializer.Deserialize<ScenarioDefinition>(fileContent, JsonSerializerOptions)!
-            : _yamlDeserializer.Deserialize<ScenarioDefinition>(fileContent);
+            : fileContent.DeserializeFromYaml<ScenarioDefinition>();    
 
         var validationResult = _validator.Validate(scenarioDefinition);
         if (!validationResult.IsValid)
