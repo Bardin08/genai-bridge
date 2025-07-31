@@ -66,7 +66,14 @@ public static class OpenAiJsonSchemaUtils
             rootSchema["$defs"] = new Dictionary<string, object>(Definitions);
         }
 
-        return JsonSerializer.Serialize(rootSchema, JsonSerializerOptions);
+        var schemaDefinition = new Dictionary<string, object>
+        {
+            ["name"] = schemaName,
+            ["strict"] = true,
+            ["schema"] = rootSchema
+        };
+        
+        return JsonSerializer.Serialize(schemaDefinition, JsonSerializerOptions);
     }
 
     private static void ResetState()
