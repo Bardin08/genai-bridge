@@ -1,0 +1,11 @@
+name: production
+on:
+  workflow_run:
+    workflows: ["Publish NuGet Package"]
+    types:
+      - completed
+
+protection_rules:
+  required_reviewers:
+    - bardin08
+  wait_timer: 0
