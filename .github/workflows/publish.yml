@@ -21,6 +21,8 @@ jobs:
   build-and-publish:
     runs-on: ubuntu-latest
     environment: production
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     permissions:
       contents: read
       packages: write
@@ -63,9 +65,9 @@ jobs:
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
-# There is an issue with integration tests in the current setup, so they are commented out.
-#      - name: Test
-#        run: dotnet test --no-build --verbosity normal --configuration Release
+      # There is an issue with integration tests in the current setup, so they are commented out.
+      #      - name: Test
+      #        run: dotnet test --no-build --verbosity normal --configuration Release
 
       - name: Pack NuGet package
         run: |
