@@ -46,15 +46,17 @@ jobs:
           LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.1.0")
           CURRENT_VERSION=${LATEST_TAG#v}
 
-          # Parse version components
-          IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
-          MAJOR=${VERSION_PARTS[0]:-0}
-          MINOR=${VERSION_PARTS[1]:-0}
-          PATCH=${VERSION_PARTS[2]:-0}
-
-          # Increment patch version
-          NEW_PATCH=$((PATCH + 1))
-          VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+          # Simple version increment - just add 0.0.1 to the current version
+          if [[ "$CURRENT_VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            MAJOR=${BASH_REMATCH[1]}
+            MINOR=${BASH_REMATCH[2]}
+            PATCH=${BASH_REMATCH[3]}
+            NEW_PATCH=$((PATCH + 1))
+            VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+          else
+            # If version format is unexpected, use a default
+            VERSION="0.1.0"
+          fi
 
           echo "Current version: ${CURRENT_VERSION}"
           echo "New version: ${VERSION}"
@@ -71,13 +73,6 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "package_version=${VERSION}" >> $GITHUB_OUTPUT
           echo "Final version: ${VERSION}"
-
-      - name: Create git tag
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
-          git push origin "v${{ steps.version.outputs.version }}"
 
       - name: Restore dependencies
         run: dotnet restore
