@@ -16,7 +16,6 @@
     <RepositoryUrl>https://github.com/Bardin08/genai-bridge</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>genai,llm,openai,embeddings,vector-store,qdrant,redis,context</PackageTags>
-    <PackageIcon>icon.png</PackageIcon>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
