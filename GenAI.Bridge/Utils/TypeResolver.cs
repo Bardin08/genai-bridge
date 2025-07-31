@@ -33,7 +33,7 @@ public static class TypeResolver
 
         try
         {
-            return OpenAiJsonSchemaGenerator.GenerateSchema(type, type.Name);
+            return OpenAiJsonSchemaUtils.GenerateSchema(type, type.Name);
         }
         catch (Exception)
         {

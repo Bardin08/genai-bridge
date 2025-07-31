@@ -1,6 +1,8 @@
-﻿using GenAI.Bridge.Adapters;
+﻿using GenAI.Bridge.Providers.Qdrant;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
+
+namespace GenAI.Bridge.Integration.Tests;
 
 public class QdrantVectorStoreTests
 {

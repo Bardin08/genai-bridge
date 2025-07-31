@@ -1,6 +1,6 @@
 using System.Text.Json;
 using GenAI.Bridge.Abstractions;
-using GenAI.Bridge.Contracts;
+using GenAI.Bridge.Contracts.Prompts;
 using StackExchange.Redis;
 
 namespace GenAI.Bridge.Context;

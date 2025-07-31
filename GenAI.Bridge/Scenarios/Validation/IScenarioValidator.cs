@@ -1,4 +1,4 @@
-using GenAI.Bridge.Contracts;
+using GenAI.Bridge.Scenarios.Models;
 
 namespace GenAI.Bridge.Scenarios.Validation;
 

@@ -1,5 +1,6 @@
 using GenAI.Bridge.Context;
 using GenAI.Bridge.Contracts;
+using GenAI.Bridge.Contracts.Prompts;
 using StackExchange.Redis;
 
 namespace GenAI.Bridge.Integration.Tests;

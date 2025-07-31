@@ -1,4 +1,4 @@
-using GenAI.Bridge.Contracts;
+using GenAI.Bridge.Contracts.Prompts;
 
 namespace GenAI.Bridge.Abstractions;
 
