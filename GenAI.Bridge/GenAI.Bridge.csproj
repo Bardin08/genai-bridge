@@ -9,12 +9,9 @@
     <PackageId>GenAI.Bridge</PackageId>
     <Title>GenAI Bridge</Title>
     <Description>A bridge library for integrating various GenAI providers and services with unified interfaces for LLM, embeddings, vector storage, and context management.</Description>
-    <Authors>Your Name</Authors>
-    <Company>Your Company</Company>
+    <Authors>Vladyslav Bardin</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/Bardin08/genai-bridge</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
     <PackageTags>genai,llm,openai,embeddings,vector-store,qdrant,redis,context</PackageTags>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <IncludeSymbols>true</IncludeSymbols>
