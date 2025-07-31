@@ -1,0 +1,121 @@
+name: Publish NuGet Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      prerelease:
+        description: "Publish as prerelease (adds -prerelease suffix)"
+        required: false
+        default: false
+        type: boolean
+      version_suffix:
+        description: "Version suffix (e.g., beta, alpha, rc)"
+        required: false
+        default: ""
+        type: string
+
+env:
+  NUGET_PACKAGE_NAME: GenAI.Bridge
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      packages: write
+      deployments: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.x"
+
+      - name: Get version info
+        id: version
+        run: |
+          # Get the latest tag or use 0.1.0 as default
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.1.0")
+          VERSION=${LATEST_TAG#v}
+
+          # Add prerelease suffix if requested
+          if [ "${{ inputs.prerelease }}" == "true" ]; then
+            if [ -n "${{ inputs.version_suffix }}" ]; then
+              VERSION="${VERSION}-${{ inputs.version_suffix }}"
+            else
+              VERSION="${VERSION}-prerelease"
+            fi
+          fi
+
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "package_version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Version: ${VERSION}"
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test --no-build --verbosity normal --configuration Release
+
+      - name: Pack NuGet package
+        run: |
+          dotnet pack GenAI.Bridge/GenAI.Bridge.csproj \
+            --configuration Release \
+            --no-build \
+            --output ./nupkgs \
+            -p:Version=${{ steps.version.outputs.package_version }}
+
+      - name: List package contents
+        run: ls -la ./nupkgs/
+
+      - name: Publish to GitHub Packages
+        run: |
+          dotnet nuget push ./nupkgs/*.nupkg \
+            --api-key ${{ secrets.GITHUB_TOKEN }} \
+            --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json \
+            --skip-duplicate
+
+      - name: Create Release
+        if: inputs.prerelease == 'false'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          release_name: Release v${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+
+      - name: Create Prerelease
+        if: inputs.prerelease == 'true'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          release_name: Prerelease v${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: true
+
+      - name: Upload package to release
+        run: |
+          gh release upload v${{ steps.version.outputs.version }} ./nupkgs/*.nupkg \
+            --repo ${{ github.repository }}
+
+      - name: Notify deployment
+        run: |
+          echo "Package published successfully!"
+          echo "Version: ${{ steps.version.outputs.package_version }}"
+          echo "Prerelease: ${{ inputs.prerelease }}"
+          if [ "${{ inputs.prerelease }}" == "true" ]; then
+            echo "This is a prerelease version"
+          fi

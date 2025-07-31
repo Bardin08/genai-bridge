@@ -1,0 +1,42 @@
+name: Deploy Package
+
+on:
+  deployment:
+    environment: production
+  deployment_status:
+    environment: production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    if: github.event.deployment.environment == 'production'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.x"
+
+      - name: Deploy notification
+        run: |
+          echo "Deployment triggered for environment: ${{ github.event.deployment.environment }}"
+          echo "Deployment ID: ${{ github.event.deployment.id }}"
+          echo "Deployment status: ${{ github.event.deployment_status.state }}"
+
+          if [ "${{ github.event.deployment_status.state }}" == "success" ]; then
+            echo "✅ Deployment successful!"
+          elif [ "${{ github.event.deployment_status.state }}" == "failure" ]; then
+            echo "❌ Deployment failed!"
+          else
+            echo "🔄 Deployment in progress..."
+          fi
+
+      - name: Update deployment status
+        if: github.event_name == 'deployment_status'
+        run: |
+          echo "Deployment status updated: ${{ github.event.deployment_status.state }}"
+          echo "Description: ${{ github.event.deployment_status.description }}"
