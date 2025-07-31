@@ -6,7 +6,7 @@ using GenAI.Bridge.Utils;
 
 namespace GenAI.Bridge.Tests.Utils;
 
-public class OpenAiJsonSchemaGeneratorTests
+public class OpenAiJsonSchemaUtilsTests
 {
     [Fact]
     public void GenerateSchema_SimpleType_ReturnsValidSchema()
@@ -15,7 +15,7 @@ public class OpenAiJsonSchemaGeneratorTests
         var schemaName = "SimpleTypeSchema";
 
         // Act
-        var schema = OpenAiJsonSchemaGenerator.GenerateSchema<SimpleType>(schemaName);
+        var schema = OpenAiJsonSchemaUtils.GenerateSchema<SimpleType>(schemaName);
 
         // Assert
         var jsonDocument = JsonDocument.Parse(schema);
@@ -50,7 +50,7 @@ public class OpenAiJsonSchemaGeneratorTests
         var schemaName = "EnumTypeSchema";
 
         // Act
-        var schema = OpenAiJsonSchemaGenerator.GenerateSchema<TypeWithEnum>(schemaName);
+        var schema = OpenAiJsonSchemaUtils.GenerateSchema<TypeWithEnum>(schemaName);
 
         // Assert
         var jsonDocument = JsonDocument.Parse(schema);
@@ -75,7 +75,7 @@ public class OpenAiJsonSchemaGeneratorTests
         var schemaName = "NestedTypeSchema";
 
         // Act
-        var schema = OpenAiJsonSchemaGenerator.GenerateSchema<ParentType>(schemaName);
+        var schema = OpenAiJsonSchemaUtils.GenerateSchema<ParentType>(schemaName);
 
         // Assert
         var jsonDocument = JsonDocument.Parse(schema);
@@ -99,7 +99,7 @@ public class OpenAiJsonSchemaGeneratorTests
         const string schemaName = "ArrayTypeSchema";
 
         // Act
-        var schema = OpenAiJsonSchemaGenerator.GenerateSchema<TypeWithArray>(schemaName);
+        var schema = OpenAiJsonSchemaUtils.GenerateSchema<TypeWithArray>(schemaName);
 
         // Assert
         var jsonDocument = JsonDocument.Parse(schema);
@@ -122,7 +122,7 @@ public class OpenAiJsonSchemaGeneratorTests
         var schemaName = "ValidationSchema";
 
         // Act
-        var schema = OpenAiJsonSchemaGenerator.GenerateSchema<TypeWithValidation>(schemaName);
+        var schema = OpenAiJsonSchemaUtils.GenerateSchema<TypeWithValidation>(schemaName);
 
         // Assert
         var jsonDocument = JsonDocument.Parse(schema);
@@ -154,7 +154,7 @@ public class OpenAiJsonSchemaGeneratorTests
         var expectedDescription = "Schema with descriptions";
 
         // Act
-        var schema = OpenAiJsonSchemaGenerator.GenerateSchema<TypeWithDescriptions>(schemaName, expectedDescription);
+        var schema = OpenAiJsonSchemaUtils.GenerateSchema<TypeWithDescriptions>(schemaName, expectedDescription);
 
         // Assert
         var jsonDocument = JsonDocument.Parse(schema);
@@ -176,7 +176,7 @@ public class OpenAiJsonSchemaGeneratorTests
         var schemaName = "CustomNamesSchema";
 
         // Act
-        var schema = OpenAiJsonSchemaGenerator.GenerateSchema<TypeWithCustomNames>(schemaName);
+        var schema = OpenAiJsonSchemaUtils.GenerateSchema<TypeWithCustomNames>(schemaName);
 
         // Assert
         var jsonDocument = JsonDocument.Parse(schema);
@@ -200,7 +200,7 @@ public class OpenAiJsonSchemaGeneratorTests
         var schemaName = "NullableSchema";
 
         // Act
-        var schema = OpenAiJsonSchemaGenerator.GenerateSchema<TypeWithNullable>(schemaName);
+        var schema = OpenAiJsonSchemaUtils.GenerateSchema<TypeWithNullable>(schemaName);
 
         // Assert
         var jsonDocument = JsonDocument.Parse(schema);

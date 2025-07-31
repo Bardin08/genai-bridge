@@ -1,7 +1,8 @@
 using System.Text.Json;
-using GenAI.Bridge.Contracts;
+using GenAI.Bridge.Contracts.Configuration;
 using GenAI.Bridge.Scenarios;
 using GenAI.Bridge.Scenarios.Models;
+using GenAI.Bridge.Scenarios.Storage;
 using GenAI.Bridge.Scenarios.Validation;
 using GenAI.Bridge.Utils;
 using Microsoft.Extensions.Logging;
