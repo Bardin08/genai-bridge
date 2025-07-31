@@ -59,6 +59,13 @@ jobs:
           echo "package_version=${VERSION}" >> $GITHUB_OUTPUT
           echo "Version: ${VERSION}"
 
+      - name: Create git tag
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
+          git push origin "v${{ steps.version.outputs.version }}"
+
       - name: Restore dependencies
         run: dotnet restore
 
@@ -87,29 +94,19 @@ jobs:
             --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json \
             --skip-duplicate
 
-      - name: Create Release
-        if: inputs.prerelease == 'false'
+      - name: Create GitHub Release
+        id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: v${{ steps.version.outputs.version }}
-          release_name: Release v${{ steps.version.outputs.version }}
+          release_name: ${{ inputs.prerelease == 'true' && 'Prerelease' || 'Release' }} v${{ steps.version.outputs.version }}
           draft: false
-          prerelease: false
-
-      - name: Create Prerelease
-        if: inputs.prerelease == 'true'
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ steps.version.outputs.version }}
-          release_name: Prerelease v${{ steps.version.outputs.version }}
-          draft: false
-          prerelease: true
+          prerelease: ${{ inputs.prerelease }}
 
       - name: Upload package to release
+        if: success()
         run: |
           gh release upload v${{ steps.version.outputs.version }} ./nupkgs/*.nupkg \
             --repo ${{ github.repository }}
